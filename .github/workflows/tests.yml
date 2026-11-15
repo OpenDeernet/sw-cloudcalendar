@@ -81,10 +81,10 @@ jobs:
           tests/E2E/package-lock.json
     - name: Build admin assets for browser tests
       run: npm ci --prefix apps/admin && npm run build --prefix apps/admin
-    - name: Install browser test dependencies
+    - name: Install browser and shell test dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y mariadb-client
+        sudo apt-get install -y mariadb-client zsh
         npm ci --prefix tests/E2E
     - name: Deferred update UI browser checks and coverage
       run: bash tests/E2E/with-browser.sh node apps/admin/scripts/test-updates-ui.mjs
