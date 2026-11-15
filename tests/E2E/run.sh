@@ -23,6 +23,8 @@ define( 'DB_HOST', ( getenv( 'SWC_TEST_DB_HOST' ) ?: '127.0.0.1' ) . ':' . ( get
 define( 'DB_CHARSET', 'utf8mb4' ); define( 'DB_COLLATE', '' );
 foreach ( array( 'AUTH_KEY', 'SECURE_AUTH_KEY', 'LOGGED_IN_KEY', 'NONCE_KEY', 'AUTH_SALT', 'SECURE_AUTH_SALT', 'LOGGED_IN_SALT', 'NONCE_SALT' ) as \$k ) { define( \$k, 'e2e-' . \$k ); }
 define( 'WP_DEBUG', true ); define( 'WP_DEBUG_LOG', __DIR__ . '/debug.log' ); define( 'WP_DEBUG_DISPLAY', false ); define( 'DISABLE_WP_CRON', true );
+// Exercise the missing-key UI without ever contacting the configured release repository.
+define( 'SW_CALENDAR_RELEASE_PUBLIC_KEYS', array() );
 define( 'SW_CALENDAR_ENCRYPTION_KEY', 'e2e-only-key' ); define( 'SW_CALENDAR_PRIVATE_STORAGE_PATH', __DIR__ . '/../wp-private' );
 \$table_prefix = 'wp_';
 if ( ! defined( 'ABSPATH' ) ) { define( 'ABSPATH', __DIR__ . '/' ); }

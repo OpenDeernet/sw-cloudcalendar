@@ -61,3 +61,7 @@ Vitest 5 zählt ausführbare Zeilen; frühere Prozentwerte aus Vitest 3 sind nic
 (Voraussetzungen wie `composer test:wp`, siehe [Development](../README.md#development)).
 Nicht parallel zur WordPress-Suite ausführen: Beide installieren ihre Testtabellen neu.
 Details, Grenzen und Referenzmessung: [tests/Performance/README.md](../tests/Performance/README.md).
+
+## Verifizierte GitHub-Updates
+
+Update-spezifische Prüfungen, isolierte native Upgrader und Docker-Browserprüfungen: [Verifikationsbericht](GITHUB-UPDATES-VERIFIKATION.md). Betriebsregeln und Schlüsselbefehle: [Betriebshandbuch](GITHUB-UPDATES-BETRIEB.md). CI-Suiten laufen ausschließlich auf Pull Requests; DB-Suiten mit gemeinsamem Zustand sequenziell.

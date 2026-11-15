@@ -1,8 +1,5 @@
 name: Tests and SonarQube
 on:
-  push:
-    branches:
-    - '**'
   pull_request: null
 permissions:
   contents: read
@@ -37,6 +34,13 @@ jobs:
     - name: WordPress coverage
       working-directory: tests/wp
       run: vendor/bin/phpunit -c phpunit.xml.dist --coverage-clover ../../coverage/wordpress.xml
+    - name: Verified updates on multisite (sequential, shared database)
+      run: WP_TESTS_MULTISITE=1 composer test:wp -- --filter VerifiedUpdatesTest
+    - name: Refuse immutable CLI and REST contexts in separate processes
+      run: |
+        php tests/release/check-policy-context.php WP_CLI
+        php tests/release/check-policy-context.php REST_REQUEST
+        php -n -d disable_functions=sodium_crypto_sign_verify_detached tests/release/check-missing-extensions.php
     - name: Test performance report formatter
       run: node --test tests/Performance/comment.test.cjs
     - name: Local performance benchmark (2000 events)
@@ -82,9 +86,18 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y mariadb-client
         npm ci --prefix tests/E2E
-        cd tests/E2E && npx playwright-core install --with-deps chromium
+    - name: Deferred update UI browser checks and coverage
+      run: bash tests/E2E/with-browser.sh node apps/admin/scripts/test-updates-ui.mjs
+    - name: Build and verify signed artifacts with disposable keys
+      run: |
+        SWC_SKIP_ADMIN_BUILD=1 bash bin/build-zip.sh "$RUNNER_TEMP/release-check"
+        php tests/release/verify-signed-build.php "$RUNNER_TEMP/release-check"
+    - name: Release command with isolated local repositories
+      run: python3 tests/release/test-release-command.py
+    - name: Verify documented key setup in isolation
+      run: python3 tests/release/check-key-instructions.py
     - name: Browser E2E
-      run: tests/E2E/run.sh "$RUNNER_TEMP/swc-e2e"
+      run: bash tests/E2E/with-browser.sh tests/E2E/run.sh "$RUNNER_TEMP/swc-e2e"
     - name: Upload browser test results
       if: always()
       uses: actions/upload-artifact@v7
@@ -170,11 +183,9 @@ jobs:
     - php
     - frontend
     if: |-
-      (github.event_name == 'pull_request' &&
-       github.event.pull_request.head.repo.full_name == github.repository &&
-       github.event.pull_request.user.login != 'dependabot[bot]') ||
-      (github.event_name == 'push' &&
-       github.ref_name == github.event.repository.default_branch)
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v7
