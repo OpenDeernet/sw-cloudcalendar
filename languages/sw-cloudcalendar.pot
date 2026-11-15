@@ -1,12 +1,12 @@
 # SOME DESCRIPTIVE TITLE.
-# Copyright (C) 2026 Stefan Warnat
+# Copyright (C) YEAR Stefan Warnat
 # This file is distributed under the same license as the sw-cloudcalendar package.
-# Stefan Warnat <ich@stefanwarnat.de>, 2026
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: sw-cloudcalendar 1.0.0\n"
+"Project-Id-Version: sw-cloudcalendar 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
@@ -179,11 +179,165 @@ msgstr ""
 msgid "Every five minutes (SW CloudCalendar)"
 msgstr ""
 
-#: src/Plugin.php:128
+#: src/Infrastructure/WordPress/Update/Manifest.php:46
+msgid "Release verification failed. The release was not accepted."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Package.php:30
+msgid "ZIP size or SHA-256 does not match, or ZIP verification is unavailable."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Package.php:34
+msgid "Invalid ZIP archive."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Package.php:40
+msgid "The update package failed the safety checks."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:68
+msgid "Manual updates only"
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:88
+msgid "GitHub installation is only allowed manually in the WordPress backend."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:92
+msgid "Automatic GitHub installation is blocked."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:111
+msgid "No valid manual WordPress update request."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:214
+msgid "Signed GitHub release. Install only manually through WordPress."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:232
+msgid "Check for updates now"
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:243
+msgid "GitHub updates are blocked: no public release key is configured."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:247
+msgid "No verified update check yet."
+msgstr ""
+
+#. translators: %s: time span, e.g. "2 hours"
+#: src/Infrastructure/WordPress/Update/Provider.php:250
+#, php-format
+msgid "Last verified check: %s ago."
+msgstr ""
+
+#. translators: %s: error message
+#: src/Infrastructure/WordPress/Update/Provider.php:254
+#, php-format
+msgid "Last error: %s"
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:290
+msgid "Checking signed releases …"
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:291
+msgid "Check finished."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:292
+msgid "GitHub could not be reached. Please try again later."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:51
+msgid "Update checks are only allowed in an authorised backend session."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:54
+msgid "No public release key or Sodium is available. GitHub updates are blocked."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:58
+msgid "An update check is already running."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:64
+msgid "The last update check is still within the check interval."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:71
+msgid "The check took too long. The result was not adopted."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:79
+msgid "Signed release information verified. Install updates only through the WordPress plugin list."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:81
+msgid "Invalid release response."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:103
+msgid "No valid stable release response."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:112
+msgid "Release manifest or signature is missing."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:128
+msgid "An already verified newer version must not be rolled back."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:150
+msgid "Please check for updates again before installing."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:157
+msgid "Outdated release offer."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:178
+msgid "Package, version or system requirements do not match."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:186
+msgid "Temporary update file unavailable."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Transport.php:27
+msgid "Update address not allowed."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Transport.php:47
+msgid "GitHub could not be reached."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Transport.php:53
+msgid "Invalid redirect."
+msgstr ""
+
+#. translators: %d: HTTP status code
+#: src/Infrastructure/WordPress/Update/Transport.php:60
+#, php-format
+msgid "GitHub responded with HTTP %d."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Transport.php:65
+msgid "The update response exceeds the size limit."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Transport.php:69
+msgid "Too many update redirects."
+msgstr ""
+
+#: src/Plugin.php:152
 msgid "SW CloudCalendar"
 msgstr ""
 
-#: src/Plugin.php:130
+#: src/Plugin.php:154
 msgid "This site shows appointments from external calendars (Google Calendar, Microsoft 365, ICS feeds). Appointment data and, if enabled, attachments are copied to this site and kept until they leave the configured synchronisation window, the calendar source is deleted or the plugin data is removed. Visitors are not tracked by the calendar. Attachments are delivered by this site; no files are loaded from the cloud providers in the visitor's browser."
 msgstr ""
 
@@ -236,15 +390,15 @@ msgstr ""
 msgid "The calendar administration requires JavaScript."
 msgstr ""
 
-#: src/Presentation/Admin/TemplateManager.php:269
+#: src/Presentation/Admin/TemplateManager.php:279
 msgid "Container"
 msgstr ""
 
-#: src/Presentation/Admin/TemplateManager.php:270
+#: src/Presentation/Admin/TemplateManager.php:280
 msgid "Event"
 msgstr ""
 
-#: src/Presentation/Admin/TemplateManager.php:271
+#: src/Presentation/Admin/TemplateManager.php:281
 msgid "Detail"
 msgstr ""
 
@@ -533,12 +687,12 @@ msgstr ""
 msgid "View image"
 msgstr ""
 
-#. translators: 1: required PHP version, 2: current PHP version
-#: sw-cloudcalendar.php:35
-#, php-format
-msgid "SW CloudCalendar requires PHP %1$s or newer with the sodium extension. You are running PHP %2$s."
+#: sw-cloudcalendar.php:40
+msgid "SW CloudCalendar: the vendor directory is missing. Install the release package or run \"composer install\"."
 msgstr ""
 
-#: sw-cloudcalendar.php:58
-msgid "SW CloudCalendar: the vendor directory is missing. Install the release package or run \"composer install\"."
+#. translators: 1: required PHP version, 2: current PHP version
+#: sw-cloudcalendar.php:63
+#, php-format
+msgid "SW CloudCalendar requires PHP %1$s or newer with the sodium extension. You are running PHP %2$s."
 msgstr ""

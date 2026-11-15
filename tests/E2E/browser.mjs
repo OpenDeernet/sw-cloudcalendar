@@ -1,7 +1,7 @@
 import { createRequire } from 'module'; const { chromium } = createRequire(process.env.PW_DIR + '/x.js')('playwright-core');
 const base = 'http://127.0.0.1:8089';
 const out = process.argv[2];
-const browser = await chromium.launch({ executablePath: process.env.CHROME });
+const browser = process.env.SWC_BROWSER_CDP ? await chromium.connectOverCDP(process.env.SWC_BROWSER_CDP) : await chromium.launch({ executablePath: process.env.CHROME });
 const results = [];
 const check = (name, ok, info = '') => { results.push(`${ok ? 'PASS' : 'FAIL'} ${name}${info ? ' – ' + info : ''}`); };
 async function ctx() {
@@ -87,6 +87,20 @@ await c.close();
 // Admin SPA
 [c, p] = await ctx();
 await login(p, 'admin', 'e2e-admin-pass');
+// Verified updates are controlled only in the native WordPress plugin list.
+await p.goto(base + '/wp-admin/plugins.php');
+await p.waitForLoadState('networkidle');
+const pluginRow = p.locator('tr[data-plugin="sw-cloudcalendar/sw-cloudcalendar.php"]');
+check('native plugin row has the check button', await pluginRow.locator('#sw_calendar-verified-updates-check').count() === 1);
+check('unconfigured release trust is shown locally', (await pluginRow.textContent()).includes('no public release key'));
+const pluginsUrl = p.url();
+await p.click('#sw_calendar-verified-updates-check');
+await p.waitForFunction(() => !document.getElementById('sw_calendar-verified-updates-check').disabled);
+check('manual check returns an explicit missing-key error', (await p.locator('#sw_calendar-verified-updates-result').textContent()).includes('GitHub updates are blocked'));
+check('manual check preserves native plugin navigation', p.url() === pluginsUrl);
+check('plugin automatic installation is disabled', (await pluginRow.textContent()).includes('Manual updates only'));
+await p.screenshot({ path: `${out}/plugins-verified-updates.png`, fullPage: true });
+
 for (const route of ['', 'connections', 'sources', 'views', 'templates', 'sync', 'settings', 'diagnostics']) {
   p.errors = [];
   await p.goto(`${base}/wp-admin/admin.php?page=sw-cloudcalendar#/${route}`);

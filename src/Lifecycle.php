@@ -35,6 +35,7 @@ final class Lifecycle {
 
 	/** Deactivation keeps all data; only scheduled events are removed. */
 	public static function deactivate(): void {
+		\SW\Calendar\Infrastructure\WordPress\Update\Provider::deactivate();
 		QueueRunner::unschedule();
 	}
 
@@ -46,6 +47,7 @@ final class Lifecycle {
 		if ( empty( Settings::get( 'delete_data_on_uninstall' ) ) ) {
 			return;
 		}
+		\SW\Calendar\Infrastructure\WordPress\Update\Provider::uninstall();
 		$services = Services::instance();
 		foreach ( $services->connections()->all() as $connection ) {
 			try {

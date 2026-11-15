@@ -76,10 +76,16 @@ All WP-CLI commands: [docs/setup.md](docs/setup.md#operation).
 
 ### Deactivation and removal
 
-Deactivating keeps all data and only stops the scheduled tasks. Deleting the plugin also keeps everything unless
+Deactivating keeps calendar data, stops scheduled tasks and removes executable cached update offers for this plugin. Deleting the plugin also keeps everything unless
 **Delete all data on uninstall** is enabled under **Calendar → Settings**; then all tables, options, the plugin's
 own folder below `uploads/` and Google tokens (revoked) are removed. A folder set via
 `SW_CALENDAR_PRIVATE_STORAGE_PATH` is never deleted. On multisite, removal only covers the main site.
+
+## GitHub updates
+
+Signed GitHub updates are installed manually through **Plugins → Installed Plugins**. The plugin ships a locally configured public release key;
+operators must distribute this trust anchor to existing installations and configure protected signed releases before updates are available.
+[Setup, key commands, rotation and WordPress.org migration](docs/GITHUB-UPDATES-BETRIEB.md).
 
 ## Troubleshooting
 
@@ -125,11 +131,17 @@ bin/i18n.sh check                            # translations complete and up to d
 (cd apps/admin && npm run typecheck && npm run lint && npm test)
 
 bin/build-zip.sh                             # release ZIP in dist/
+make release VERSION=1.2.3                    # commit version, tag and atomically push to origin
 ```
+
+`make release VERSION=1.2.3` requires a clean working tree, a checked-out branch and an unused local/remote tag.
+It updates the plugin header and `SW_CALENDAR_VERSION`, commits the version change, creates an annotated tag and
+atomically pushes the branch and tag to `origin`, triggering the signed release workflow. Downgrades are rejected.
+Configure the protected release environment and signing key first; see the [release operations guide](docs/GITHUB-UPDATES-BETRIEB.md).
 
 Every change needs tests; line coverage must stay above 80 % for PHP and JavaScript/TypeScript.
 Details: [docs/development.md](docs/development.md), [docs/testing.md](docs/testing.md) (incl. browser tests),
-[docs/sonarqube.md](docs/sonarqube.md). GitHub Actions run all checks on every push.
+[docs/sonarqube.md](docs/sonarqube.md). GitHub Actions run test suites on pull requests; release tags only build, validate and sign artifacts.
 
 ## License
 
