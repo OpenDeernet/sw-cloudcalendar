@@ -19,7 +19,12 @@ async function ctx() {
 async function login(p, user, pass) {
   await p.goto(base + '/wp-login.php');
   await p.fill('#user_login', user); await p.fill('#user_pass', pass);
-  await p.click('#wp-submit'); await p.waitForLoadState('networkidle');
+  // Wait for the login redirect itself: networkidle on the old page can resolve before form submission.
+  await Promise.all([
+    p.waitForURL((url) => url.pathname.startsWith('/wp-admin/'), { waitUntil: 'domcontentloaded' }),
+    p.click('#wp-submit'),
+  ]);
+  await p.waitForLoadState('networkidle');
 }
 
 // Guest
