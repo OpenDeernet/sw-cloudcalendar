@@ -45,6 +45,8 @@ final class ViewManager {
 			'language'                       => $view->language,
 			'color_rules'                    => (object) $view->colorRules,
 			'html_cache'                     => $view->htmlCache,
+			'preload'                        => $view->preload,
+			'preload_cache_minutes'          => $view->preloadCacheMinutes,
 			'date_format'                    => $view->dateFormat,
 			'time_format'                    => $view->timeFormat,
 			'show_navigation'                => $view->showNavigation,
@@ -214,6 +216,13 @@ final class ViewManager {
 			}
 			$formats[ $field ] = $value;
 		}
+		if ( array_key_exists( 'preload', $data ) && ! is_bool( $data['preload'] ) ) {
+			$errors['preload'] = 'invalid';
+		}
+		$preload_minutes = array_key_exists( 'preload_cache_minutes', $data ) ? $data['preload_cache_minutes'] : 60;
+		if ( ! is_int( $preload_minutes ) || $preload_minutes < 60 || $preload_minutes > 10080 ) {
+			$errors['preload_cache_minutes'] = 'invalid';
+		}
 		if ( array() !== $errors ) {
 			throw new ValidationException( $errors );
 		}
@@ -233,6 +242,8 @@ final class ViewManager {
 			'language'                       => $language,
 			'color_rules'                    => $colors,
 			'html_cache'                     => (bool) ( $data['html_cache'] ?? true ),
+			'preload'                        => (bool) ( $data['preload'] ?? false ),
+			'preload_cache_minutes'          => $preload_minutes,
 			'date_format'                    => $formats['date_format'],
 			'time_format'                    => $formats['time_format'],
 			'show_navigation'                => (bool) ( $data['show_navigation'] ?? true ),

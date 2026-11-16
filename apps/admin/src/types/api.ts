@@ -282,6 +282,8 @@ export interface ViewInput {
   /** `#rrggbb` accent of mode tabs and search button; empty = default. */
   primary_color: string;
   html_cache: boolean;
+  preload: boolean;
+  preload_cache_minutes: number;
   date_format: string;
   time_format: string;
   /** Previous/next navigation (months in the grid, earlier/more events in lists). */
@@ -292,7 +294,7 @@ export interface CalendarView extends ViewInput {
   id: number;
   revision: number;
   shortcode: string;
-  /** Contains non-public sources: the frontend loads it via REST. */
+  /** Requires a REST placeholder (restricted/local sources without preload). */
   dynamic: boolean;
 }
 

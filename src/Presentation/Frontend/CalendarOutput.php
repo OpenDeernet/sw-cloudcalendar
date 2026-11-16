@@ -15,9 +15,10 @@ use SW\Calendar\Infrastructure\WordPress\WpUrlGenerator;
 use SW\Calendar\Services;
 
 /**
- * Views that contain non-public sources are never serialized into page HTML: a placeholder is printed and the
+ * By default, views with non-public sources are not serialized into page HTML: a placeholder is printed and the
  * calendar is loaded through the REST endpoint (private, no-store) after a fresh nonce was fetched, so a full page
- * cache cannot hand protected events to guests (SPECIFICATIONS.md §9.3). Public views are rendered inline.
+ * cache cannot hand protected events to guests (SPECIFICATIONS.md §9.3). Explicit preload opts into page HTML
+ * even for restricted/local sources; operators must then configure their page cache (docs/decisions.md D-31).
  */
 final class CalendarOutput {
 

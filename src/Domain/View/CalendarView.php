@@ -46,6 +46,10 @@ final class CalendarView
         public readonly array $eventTemplateIdsByMode = [],
         /** Accent of mode tabs and search button as `#rrggbb`; empty keeps the stylesheet default. */
         public readonly string $primaryColor = '',
+        /** Opt-in server rendering, including local and restricted sources; page-cache policy is operator-owned. */
+        public readonly bool $preload = false,
+        /** Lifetime of preloaded HTML in minutes (60–10080), when view and global HTML caching are enabled. */
+        public readonly int $preloadCacheMinutes = 60,
     ) {
     }
 

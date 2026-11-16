@@ -136,7 +136,11 @@ const sortOptions = computed(() => [
 const selectedSources = computed(() =>
   sources.value.filter((s) => form.value.source_ids.includes(s.id)),
 );
-const hasNonPublic = computed(() => selectedSources.value.some((s) => s.visibility !== 'public'));
+const hasRestrictedSources = computed(() =>
+  selectedSources.value.some(
+    (s) => s.visibility !== 'public' || s.local === true || s.provider === 'local',
+  ),
+);
 
 function toggleMode(mode: DisplayMode, on: boolean): void {
   const set = new Set(form.value.allowed_modes);
@@ -364,7 +368,9 @@ watch(previewMode, () => void renderPreview());
                 </q-item>
               </template>
             </q-select>
-            <p v-if="hasNonPublic" class="swc-callout is-info">{{ t('views.dynamicHint') }}</p>
+            <p v-if="hasRestrictedSources && !form.preload" class="swc-callout is-info">
+              {{ t('views.dynamicHint') }}
+            </p>
             <div v-if="selectedSources.length > 0">
               <p class="swc-eyebrow">{{ t('views.colorOverrides') }}</p>
               <ul class="swc-ve__colors">
@@ -654,6 +660,27 @@ watch(previewMode, () => void renderPreview());
             <p class="swc-hint">{{ t('views.primaryColorHint') }}</p>
             <q-toggle v-model="form.show_navigation" :label="t('views.showNavigation')" />
             <p class="swc-hint">{{ t('views.showNavigationHint') }}</p>
+            <q-toggle v-model="form.preload" :label="t('views.preload')" />
+            <p class="swc-hint">{{ t('views.preloadHint') }}</p>
+            <p
+              v-if="form.preload && hasRestrictedSources"
+              role="alert"
+              class="swc-callout is-warning"
+            >
+              {{ t('views.preloadPrivateWarning') }}
+            </p>
+            <q-input
+              v-if="form.preload"
+              v-model.number="form.preload_cache_minutes"
+              type="number"
+              outlined
+              dense
+              min="60"
+              max="10080"
+              :label="t('views.preloadCacheMinutes')"
+              :error="!!fields.field('preload_cache_minutes')"
+              :error-message="fields.field('preload_cache_minutes')"
+            />
             <q-toggle v-model="form.html_cache" :label="t('views.htmlCache')" />
             <p class="swc-hint">{{ t('views.htmlCacheHint') }}</p>
           </SwcCard>

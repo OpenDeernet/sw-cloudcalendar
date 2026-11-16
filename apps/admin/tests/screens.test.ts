@@ -534,8 +534,49 @@ describe('admin actions against REST contracts', () => {
       });
     });
   });
+  it.each([
+    ['private sources', { visibility: 'authenticated', provider: 'google', local: false }],
+    [
+      'public local sources via local flag',
+      { visibility: 'public', provider: 'google', local: true },
+    ],
+    ['public local sources via provider', { visibility: 'public', provider: 'local' }],
+  ])('saves preload duration and warns for %s', async (_label, sourceSettings) => {
+    const original = routes['admin/sources'];
+    routes['admin/sources'] = page([{ ...source, ...sourceSettings }]);
+    try {
+      await render('/views/5', async (wrapper) => {
+        const toggle = wrapper
+          .findAllComponents(QToggle)
+          .find((c) => c.props('label') === 'Erste Ansicht mit der Seite laden')!;
+        expect(wrapper.text()).not.toContain('Du bist dafür verantwortlich');
+        toggle.vm.$emit('update:modelValue', true);
+        await settle();
+        expect(wrapper.get('[role="alert"]').text()).toContain('Du bist dafür verantwortlich');
+        const duration = wrapper
+          .findAllComponents(QInput)
+          .find((c) => String(c.props('label')).startsWith('Vorablade-Cache-Dauer'))!;
+        duration.vm.$emit('update:modelValue', 120);
+        await settle();
+        wrapper.getComponent(QForm).vm.$emit('submit');
+        await settle();
+        expect(written('admin/views/5', 'PUT')).toMatchObject({
+          preload: true,
+          preload_cache_minutes: 120,
+        });
+      });
+    } finally {
+      routes['admin/sources'] = original;
+    }
+  });
   it('saves view filters and refreshes its preview', async () => {
     await render('/views/5', async (wrapper) => {
+      const toggle = wrapper
+        .findAllComponents(QToggle)
+        .find((c) => c.props('label') === 'Erste Ansicht mit der Seite laden')!;
+      toggle.vm.$emit('update:modelValue', true);
+      await settle();
+      expect(wrapper.text()).not.toContain('Du bist dafür verantwortlich');
       wrapper.getComponent(QForm).vm.$emit('submit');
       await settle();
       expect(written('admin/views/5', 'PUT')).toMatchObject({
@@ -902,7 +943,12 @@ describe('admin actions against REST contracts', () => {
   it('documents the available CSS variables in the CSS tab', async () => {
     await render('/templates/7', async (wrapper) => {
       const list = wrapper.get('.swc-te__cssvars-list');
-      for (const name of ['--swc-primary', '--swc-primary-text', '--swc-event-color', '--swc-event-text']) {
+      for (const name of [
+        '--swc-primary',
+        '--swc-primary-text',
+        '--swc-event-color',
+        '--swc-event-text',
+      ]) {
         expect(list.text()).toContain(name);
       }
       expect(list.findAll('dd')).toHaveLength(4);

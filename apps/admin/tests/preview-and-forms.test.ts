@@ -121,6 +121,23 @@ describe('view form', () => {
       '1': '#aabbcc',
     });
   });
+  it('preserves preload settings and defaults old views to opt-out', () => {
+    const view = {
+      ...blankView(),
+      id: 8,
+      revision: 1,
+      preload: true,
+      preload_cache_minutes: 180,
+    } as CalendarView;
+    expect(toViewInput(view)).toMatchObject({ preload: true, preload_cache_minutes: 180 });
+    const legacy = { ...view } as unknown as Record<string, unknown>;
+    delete legacy.preload;
+    delete legacy.preload_cache_minutes;
+    expect(toViewInput(legacy as unknown as CalendarView)).toMatchObject({
+      preload: false,
+      preload_cache_minutes: 60,
+    });
+  });
   it('keeps the primary colour and defaults to none for older views', () => {
     expect(blankView().primary_color).toBe('');
     const stored = { ...blankView(), id: 5, revision: 1, primary_color: '#aa3300' } as CalendarView;

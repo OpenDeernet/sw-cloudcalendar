@@ -30,13 +30,15 @@ use SW\Calendar\Support\ClockInterface;
 
 /**
  * The single read path for shortcode, block and REST (SPECIFICATIONS.md §10.3): authorize sources, resolve filter
- * and window, query local data only, render templates, optionally use the HTML cache for public scopes.
+ * and window, query local data only, render templates, optionally cache public scopes or explicitly preloaded visitor scopes.
  *
  * `effective_source_ids = view_source_ids ∩ requested_source_ids ∩ authorized_source_ids` is computed BEFORE any
- * cache lookup; private scopes are never cached.
+ * cache lookup; preloaded private/local scopes use a visitor-specific cache and still recheck access on every read.
  */
 final class ViewRenderer
 {
+    // Exclude HTML cached before incomplete local queries were tracked.
+    private const HTML_CACHE_VERSION = 2;
     private const MIN_TTL = 30;
     private const MAX_TTL = 900;
 
@@ -63,12 +65,12 @@ final class ViewRenderer
 
     /**
      * Whether the view contains sources that are not public. Such views are rendered through the non-cacheable REST
-     * endpoint instead of being serialized into (potentially publicly cached) page HTML (SPECIFICATIONS.md §9.3).
+     * endpoint unless an operator explicitly enables preloading (docs/decisions.md D-31).
      */
     public function requiresDynamicLoading(int $viewId): bool
     {
         $view = $this->views->find($viewId);
-        return $view !== null && $view->enabled && $this->containsRestricted($view);
+        return $view !== null && $view->enabled && !$view->preload && $this->containsRestricted($view);
     }
 
     private function containsRestricted(CalendarView $view): bool
@@ -123,11 +125,14 @@ final class ViewRenderer
         // "Public" is a property of the whole view: if it contains any restricted source the output depends on the
         // user and must never be shared through HTTP caches, even if this user only sees the public part.
         $public = $allowed !== [] && $this->allPublic($sources) && !$this->containsRestricted($view);
-        $cacheable = $view->id > 0 && $allowed !== [] && $this->allPublic($sources) && $view->htmlCache && $this->settings->htmlCacheEnabled && !$this->containsLive($view);
-        $cacheKey = $cacheable ? $this->cacheKey($view, $sources, $filter, $mode, [$container, $event], $tz) : '';
+        $cacheable = $view->id > 0 && $allowed !== [] && $view->htmlCache && $this->settings->htmlCacheEnabled
+            && ($view->preload || ($this->allPublic($sources) && !$this->containsLive($view)));
+        // Local adapters may authorize visitors differently even on a public CloudCalendar source.
+        $scope = $view->preload && (!$public || $this->containsLive($view)) ? 'user:' . ($userId ?? 0) : 'public';
+        $cacheKey = $cacheable ? $this->cacheKey($view, $sources, $filter, $mode, [$container, $event], $tz, $scope) : '';
         if ($cacheable) {
             $hit = $this->cache->get($cacheKey);
-            $cached = $hit === null ? null : RenderResult::fromCache($hit);
+            $cached = $hit === null ? null : RenderResult::fromCache($hit, $public);
             if ($cached !== null) {
                 return $cached;
             }
@@ -204,8 +209,9 @@ final class ViewRenderer
             $parsed->errors,
             $found['total'],
         );
-        if ($cacheable) {
-            $this->cache->set($cacheKey, $result->toJson(), $this->ttl($now, $range, $items, $tz));
+        if ($cacheable && $found['complete']) {
+            $ttl = $view->preload ? max(60, min(10080, $view->preloadCacheMinutes)) * 60 : $this->ttl($now, $range, $items, $tz);
+            $this->cache->set($cacheKey, $result->toJson(), $ttl);
         }
         return $result;
     }
@@ -349,12 +355,12 @@ final class ViewRenderer
      * on both sides. Items are always returned in the requested display order.
      *
      * @param list<int> $allowed
-     * @return array{items: list<Occurrence>, total: int, hasPrevious: bool, hasNext: bool}
+     * @return array{items: list<Occurrence>, total: int, hasPrevious: bool, hasNext: bool, complete: bool}
      */
     private function page(array $allowed, QueryRange $range, RenderFilter $filter, int $page, int $limit, \DateTimeZone $tz, \DateTimeImmutable $now): array
     {
         if ($allowed === []) {
-            return ['items' => [], 'total' => 0, 'hasPrevious' => false, 'hasNext' => false];
+            return ['items' => [], 'total' => 0, 'hasPrevious' => false, 'hasNext' => false, 'complete' => true];
         }
         $descending = $filter->sort === 'desc';
         $offset = $tz->getOffset($now);
@@ -376,13 +382,22 @@ final class ViewRenderer
         );
         if ($page >= 1) {
             $found = $query($range, $descending, $limit, ($page - 1) * $limit, false);
-            $hasPrevious = $page > 1 || ($filter->month === null && $query($before, true, 1, 0, true)['total'] > 0);
-            return ['items' => $found['items'], 'total' => $found['total'], 'hasPrevious' => $hasPrevious, 'hasNext' => $found['total'] > $page * $limit];
+            $previous = $page === 1 && $filter->month === null ? $query($before, true, 1, 0, true) : null;
+            return [
+                'items' => $found['items'], 'total' => $found['total'],
+                'hasPrevious' => $page > 1 || ($previous['total'] ?? 0) > 0,
+                'hasNext' => $found['total'] > $page * $limit,
+                'complete' => ($found['complete'] ?? true) && ($previous['complete'] ?? true),
+            ];
         }
         $back = abs($page);
         $found = $query($before, true, $limit, ($back - 1) * $limit, true);
         $items = $descending ? $found['items'] : array_reverse($found['items']);
-        return ['items' => $items, 'total' => $found['total'], 'hasPrevious' => $found['total'] > $back * $limit, 'hasNext' => true];
+        return [
+            'items' => $items, 'total' => $found['total'],
+            'hasPrevious' => $found['total'] > $back * $limit, 'hasNext' => true,
+            'complete' => $found['complete'] ?? true,
+        ];
     }
 
     /**
@@ -559,7 +574,7 @@ final class ViewRenderer
      * @param array<int, Source>     $sources
      * @param list<ResolvedTemplate> $templates
      */
-    private function cacheKey(CalendarView $view, array $sources, RenderFilter $filter, DisplayMode $mode, array $templates, \DateTimeZone $tz): string
+    private function cacheKey(CalendarView $view, array $sources, RenderFilter $filter, DisplayMode $mode, array $templates, \DateTimeZone $tz, string $scope): string
     {
         $revisions = [];
         foreach ($sources as $source) {
@@ -567,6 +582,7 @@ final class ViewRenderer
         }
         ksort($revisions);
         $parts = [
+            'cache_version' => self::HTML_CACHE_VERSION,
             'view' => $view->id,
             'view_revision' => $view->revision,
             'page_url' => $this->urls->calendar($view->id, []),
@@ -577,7 +593,7 @@ final class ViewRenderer
             'locale' => $this->settings->locale,
             'tz' => $tz->getName(),
             'week_start' => $this->settings->weekStart,
-            'scope' => 'public',
+            'scope' => $scope,
             'engine' => TemplateCompiler::ENGINE_VERSION,
         ];
         return 'swc:html:' . hash('sha256', (string) json_encode($parts));
