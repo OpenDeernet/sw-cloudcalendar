@@ -71,6 +71,7 @@ final class LocalOccurrenceQuery implements OccurrenceQueryInterface
     ): array {
         $stored = [];
         $groups = [];
+        $complete = true;
         foreach ($this->sources->findMany($sourceIds) as $source) {
             $connection = $this->connections->find($source->connectionId);
             if ($connection?->provider !== Provider::Local) {
@@ -78,10 +79,16 @@ final class LocalOccurrenceQuery implements OccurrenceQueryInterface
             } elseif ($connection->status === ConnectionStatus::Connected) {
                 $groups[$connection->id]['adapter'] = (string) $connection->setting('adapter', '');
                 $groups[$connection->id]['sources'][$source->externalId] = $source;
+            } else {
+                $complete = false;
             }
         }
         if ($groups === []) {
-            return $this->stored->find($stored, $range, $search, $location, $excludeIds, $descending, $limit, $offset, $sortOffsetSeconds, $endedBeforeRangeEnd);
+            $result = $this->stored->find($stored, $range, $search, $location, $excludeIds, $descending, $limit, $offset, $sortOffsetSeconds, $endedBeforeRangeEnd);
+            if (!$complete) {
+                $result['complete'] = false;
+            }
+            return $result;
         }
         // For a single stream push the offset into SQL. For mixed streams each contributes its first offset+limit
         // candidates; applying offset separately to each stream would drop valid events from the combined page.
@@ -95,6 +102,7 @@ final class LocalOccurrenceQuery implements OccurrenceQueryInterface
         foreach ($groups as $group) {
             $adapter = $this->registry->get($group['adapter']);
             if ($adapter === null) {
+                $complete = false;
                 continue;
             }
             $excluded = [];
@@ -109,6 +117,7 @@ final class LocalOccurrenceQuery implements OccurrenceQueryInterface
                 $page = $adapter->query(new LocalEventQuery(array_map('strval', array_keys($group['sources'])), $range, $search, $location, $excluded, $descending, $take, $skip, $sortOffsetSeconds, $endedBeforeRangeEnd));
             } catch (\Throwable) {
                 $this->logger->log('error', 'local_source_unavailable', 'Local source query failed.', ['adapter' => $group['adapter']]);
+                $complete = false;
                 continue;
             }
             foreach ($page->items as $event) {
@@ -124,7 +133,11 @@ final class LocalOccurrenceQuery implements OccurrenceQueryInterface
             $timeB = $b->startUtc->getTimestamp() - ($b->allDay ? $sortOffsetSeconds : 0);
             return ($descending ? $timeB <=> $timeA : $timeA <=> $timeB) ?: ($a->sourceId <=> $b->sourceId) ?: (is_int($a->id) && is_int($b->id) ? $a->id <=> $b->id : strcmp($a->providerEventId, $b->providerEventId));
         });
-        return ['items' => array_slice($found['items'], $single ? 0 : $offset, $limit), 'total' => $found['total']];
+        $result = ['items' => array_slice($found['items'], $single ? 0 : $offset, $limit), 'total' => $found['total']];
+        if (!$complete || !($found['complete'] ?? true)) {
+            $result['complete'] = false;
+        }
+        return $result;
     }
 
     public function findById(int|string $id): ?Occurrence

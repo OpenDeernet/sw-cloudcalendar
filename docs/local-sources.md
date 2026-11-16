@@ -104,7 +104,7 @@ kein konkretes Laufzeitversprechen ohne Messung.
 
 Quellplugins synchronisieren weiterhin selbst. Der Adapter darf beim Seitenaufruf keine externe API kontaktieren.
 Fehlende Adapter liefern keine lokalen Termine. Laufzeitfehler werden ohne Event-/Geheimnisdaten protokolliert;
-andere Quellen bleiben nutzbar. Ein fehlgeschlagener Adapter liefert in dieser Antwort keinen Beitrag zur Gesamtzahl.
+andere Quellen bleiben nutzbar. Ein fehlgeschlagener Adapter liefert in dieser Antwort keinen Beitrag zur Gesamtzahl. Die interne Abfrage markiert die Antwort dabei mit `complete: false`; solche leeren oder partiellen Ergebnisse werden auch beim Vorabladen nicht als HTML gecacht. Die nächste Anfrage versucht den Adapter erneut. Erfolgreich leere Ergebnisse bleiben cachefähig.
 
 ## Berechtigungen und Caches
 

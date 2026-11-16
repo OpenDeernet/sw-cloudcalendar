@@ -25,12 +25,21 @@ final class PreloadViewTest extends SWC_TestCase {
 		$this->adapter = new class() implements LocalEventSourceInterface {
 			public int $queries = 0;
 			public bool $allowed = true;
+			public bool $fail = false;
+			public ?int $fail_on_query = null;
+			public bool $empty = false;
 			public string $title = 'Initial local event';
 			public function name(): string { return 'Preload test'; }
 			public function calendars(): array { return array(); }
 			public function canReadCalendar( string $calendarId, ?int $userId ): bool { return $this->allowed; }
 			public function query( LocalEventQuery $query ): LocalEventPage {
 				++$this->queries;
+				if ( $this->fail || $this->queries === $this->fail_on_query ) {
+					throw new RuntimeException( 'Transient adapter failure' );
+				}
+				if ( $this->empty ) {
+					return new LocalEventPage( array(), 0 );
+				}
 				$start = new DateTimeImmutable( '2026-10-25T10:00:00Z' );
 				return new LocalEventPage( array( new LocalEvent( 'one', 'cal', $this->title, $start, $start->modify( '+1 hour' ) ) ), 1 );
 			}
@@ -151,6 +160,66 @@ final class PreloadViewTest extends SWC_TestCase {
 		$this->assertStringContainsString( 'swc-dynamic', ( new CalendarOutput( $this->services ) )->render( array( 'id' => $this->view_id ) ) );
 		$this->enable( array( 'enabled' => false ) );
 		$this->assertSame( '', ( new CalendarOutput( $this->services ) )->render( array( 'id' => $this->view_id ) ) );
+	}
+
+	/** @dataProvider mixed_source_cases */
+	public function test_adapter_failure_does_not_cache_empty_or_partial_html( bool $mixed ): void {
+		$ids = array( $this->source_id );
+		if ( $mixed ) {
+			$stored = $this->source( $this->ics_connection() );
+			$this->sync( $stored );
+			$ids[] = $stored;
+		}
+		$this->enable( array( 'source_ids' => $ids ) );
+		$this->adapter->fail = true;
+		$renderer = $this->services->renderer();
+		$filter = array( 'month' => '2026-10' );
+		$failed = $renderer->render( $this->view_id, $filter, null );
+		$this->assertFalse( $failed->cacheHit );
+		$this->assertStringNotContainsString( 'Initial local event', $failed->html );
+		$this->assertFalse( $renderer->render( $this->view_id, $filter, null )->cacheHit );
+		if ( $mixed ) {
+			$this->assertStringContainsString( 'Gottesdienst', $failed->html );
+		}
+		$this->adapter->fail = false;
+		$recovered = $renderer->render( $this->view_id, $filter, null );
+		$this->assertFalse( $recovered->cacheHit );
+		$this->assertStringContainsString( 'Initial local event', $recovered->html );
+		$count = $this->adapter->queries;
+		$this->assertTrue( $renderer->render( $this->view_id, $filter, null )->cacheHit );
+		$this->assertSame( $count, $this->adapter->queries );
+	}
+
+	public static function mixed_source_cases(): array {
+		return array( 'local only' => array( false ), 'mixed local and stored' => array( true ) );
+	}
+
+	/** @dataProvider page_failure_cases */
+	public function test_failed_page_or_navigation_probe_is_retried( int $fail_on, int $page ): void {
+		$this->enable();
+		$this->adapter->fail_on_query = $fail_on;
+		$renderer = $this->services->renderer();
+		$filter = array( 'page' => $page );
+		$this->assertFalse( $renderer->render( $this->view_id, $filter, null )->cacheHit );
+		$this->adapter->fail_on_query = null;
+		$recovered = $renderer->render( $this->view_id, $filter, null );
+		$this->assertFalse( $recovered->cacheHit );
+		$this->assertStringContainsString( 'Initial local event', $recovered->html );
+		$this->assertTrue( $renderer->render( $this->view_id, $filter, null )->cacheHit );
+	}
+
+	public static function page_failure_cases(): array {
+		return array( 'first page' => array( 1, 1 ), 'navigation probe' => array( 2, 1 ), 'backward page' => array( 1, -1 ) );
+	}
+
+	public function test_successful_empty_result_is_still_cached(): void {
+		$this->enable();
+		$this->adapter->empty = true;
+		$renderer = $this->services->renderer();
+		$this->assertSame( 0, $renderer->render( $this->view_id, array(), null )->total );
+		$count = $this->adapter->queries;
+		$this->assertTrue( $renderer->render( $this->view_id, array(), null )->cacheHit );
+		$this->assertSame( $count, $this->adapter->queries );
 	}
 
 }

@@ -77,3 +77,7 @@ Local verification (16 November 2026): 196 unit/integration tests, 286 WordPress
 Review follow-up for PR #44: the editor now warns for every selected local source, even when its CloudCalendar visibility is public, because adapter permissions can be visitor-specific. Regression cases cover both the `local` flag and `provider: local`, plus synchronized-public views without a warning. All 195 JS/TS tests, ESLint, TypeScript and the admin build passed; JS/TS line coverage is 83.58%.
 
 The review follow-up Docker run passed all 38 checks after synchronizing login with the backend redirect; server logs confirmed login POSTs before protected navigation.
+
+A second automated-review finding is addressed by propagating optional `complete: false` query metadata through pagination (including navigation probes) and skipping HTML cache writes for partial adapter failures. Regression tests cover local-only and mixed-source failures/recovery, forward/backward pages, navigation-only failures, legitimately empty calendars, disconnected sources and incomplete upstream results. The HTML cache key version invalidates older entries that may contain partial results.
+
+After the second review correction: 198 unit/integration tests (550 assertions), 292 WordPress tests (1,635 assertions) and all 38 Docker browser checks passed. PHP line coverage is 89.78%; PHPStan 8 and both PHP linters passed (existing PSR-12 warnings unchanged). Frontend results remain 195 passing tests and 83.58% line coverage.

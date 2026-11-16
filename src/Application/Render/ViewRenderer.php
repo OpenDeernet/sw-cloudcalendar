@@ -37,6 +37,8 @@ use SW\Calendar\Support\ClockInterface;
  */
 final class ViewRenderer
 {
+    // Exclude HTML cached before incomplete local queries were tracked.
+    private const HTML_CACHE_VERSION = 2;
     private const MIN_TTL = 30;
     private const MAX_TTL = 900;
 
@@ -207,7 +209,7 @@ final class ViewRenderer
             $parsed->errors,
             $found['total'],
         );
-        if ($cacheable) {
+        if ($cacheable && $found['complete']) {
             $ttl = $view->preload ? max(60, min(10080, $view->preloadCacheMinutes)) * 60 : $this->ttl($now, $range, $items, $tz);
             $this->cache->set($cacheKey, $result->toJson(), $ttl);
         }
@@ -353,12 +355,12 @@ final class ViewRenderer
      * on both sides. Items are always returned in the requested display order.
      *
      * @param list<int> $allowed
-     * @return array{items: list<Occurrence>, total: int, hasPrevious: bool, hasNext: bool}
+     * @return array{items: list<Occurrence>, total: int, hasPrevious: bool, hasNext: bool, complete: bool}
      */
     private function page(array $allowed, QueryRange $range, RenderFilter $filter, int $page, int $limit, \DateTimeZone $tz, \DateTimeImmutable $now): array
     {
         if ($allowed === []) {
-            return ['items' => [], 'total' => 0, 'hasPrevious' => false, 'hasNext' => false];
+            return ['items' => [], 'total' => 0, 'hasPrevious' => false, 'hasNext' => false, 'complete' => true];
         }
         $descending = $filter->sort === 'desc';
         $offset = $tz->getOffset($now);
@@ -380,13 +382,22 @@ final class ViewRenderer
         );
         if ($page >= 1) {
             $found = $query($range, $descending, $limit, ($page - 1) * $limit, false);
-            $hasPrevious = $page > 1 || ($filter->month === null && $query($before, true, 1, 0, true)['total'] > 0);
-            return ['items' => $found['items'], 'total' => $found['total'], 'hasPrevious' => $hasPrevious, 'hasNext' => $found['total'] > $page * $limit];
+            $previous = $page === 1 && $filter->month === null ? $query($before, true, 1, 0, true) : null;
+            return [
+                'items' => $found['items'], 'total' => $found['total'],
+                'hasPrevious' => $page > 1 || ($previous['total'] ?? 0) > 0,
+                'hasNext' => $found['total'] > $page * $limit,
+                'complete' => ($found['complete'] ?? true) && ($previous['complete'] ?? true),
+            ];
         }
         $back = abs($page);
         $found = $query($before, true, $limit, ($back - 1) * $limit, true);
         $items = $descending ? $found['items'] : array_reverse($found['items']);
-        return ['items' => $items, 'total' => $found['total'], 'hasPrevious' => $found['total'] > $back * $limit, 'hasNext' => true];
+        return [
+            'items' => $items, 'total' => $found['total'],
+            'hasPrevious' => $found['total'] > $back * $limit, 'hasNext' => true,
+            'complete' => $found['complete'] ?? true,
+        ];
     }
 
     /**
@@ -571,6 +582,7 @@ final class ViewRenderer
         }
         ksort($revisions);
         $parts = [
+            'cache_version' => self::HTML_CACHE_VERSION,
             'view' => $view->id,
             'view_revision' => $view->revision,
             'page_url' => $this->urls->calendar($view->id, []),
