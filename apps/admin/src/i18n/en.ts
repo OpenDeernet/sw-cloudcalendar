@@ -605,7 +605,7 @@ const en: typeof de = {
     copyShortcodeNamed: 'Copy shortcode of “{name}”',
     dynamic: 'Dynamic',
     dynamicHint:
-      'Views with non-public sources are “dynamic”: they are loaded in the browser via REST so that public page caches never store protected events.',
+      'Views with non-public or local sources are “dynamic”: they are loaded in the browser via REST so that public page caches never store protected events.',
     deleteTitle: 'Delete view?',
     deleteConsequence1: 'Shortcodes and blocks using this view will no longer display anything.',
     deleted: 'View deleted.',
@@ -653,7 +653,7 @@ const en: typeof de = {
       'Render the calendar with the page, without an initial AJAX request. The first request fills the HTML cache; subsequent requests reuse it for the configured duration when view and global HTML caching are enabled. Changed local events may remain stale until expiry. Navigation and search remain interactive.',
     preloadCacheMinutes: 'Preload cache duration (minutes, 60–10080)',
     preloadPrivateWarning:
-      'This view includes private sources. Preloading places authorized private events in the page HTML. You are responsible for excluding this page from shared page/CDN caches or configuring them per user. The plugin cache is separated per visitor and access is rechecked before reuse.',
+      'This view includes private sources or local sources with adapter-specific permissions. Preloading places authorized private events in the page HTML. You are responsible for excluding this page from shared page/CDN caches or configuring them per user. The plugin cache is separated per visitor and access is rechecked before reuse.',
     htmlCache: 'Use HTML cache',
     htmlCacheHint: 'Only applies if the HTML cache is enabled globally as well.',
     sectionFilters: 'Default filters',

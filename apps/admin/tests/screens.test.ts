@@ -534,9 +534,16 @@ describe('admin actions against REST contracts', () => {
       });
     });
   });
-  it('saves preload duration and warns when private sources are selected', async () => {
+  it.each([
+    ['private sources', { visibility: 'authenticated', provider: 'google', local: false }],
+    [
+      'public local sources via local flag',
+      { visibility: 'public', provider: 'google', local: true },
+    ],
+    ['public local sources via provider', { visibility: 'public', provider: 'local' }],
+  ])('saves preload duration and warns for %s', async (_label, sourceSettings) => {
     const original = routes['admin/sources'];
-    routes['admin/sources'] = page([{ ...source, visibility: 'authenticated' }]);
+    routes['admin/sources'] = page([{ ...source, ...sourceSettings }]);
     try {
       await render('/views/5', async (wrapper) => {
         const toggle = wrapper
@@ -564,6 +571,12 @@ describe('admin actions against REST contracts', () => {
   });
   it('saves view filters and refreshes its preview', async () => {
     await render('/views/5', async (wrapper) => {
+      const toggle = wrapper
+        .findAllComponents(QToggle)
+        .find((c) => c.props('label') === 'Erste Ansicht mit der Seite laden')!;
+      toggle.vm.$emit('update:modelValue', true);
+      await settle();
+      expect(wrapper.text()).not.toContain('Du bist dafür verantwortlich');
       wrapper.getComponent(QForm).vm.$emit('submit');
       await settle();
       expect(written('admin/views/5', 'PUT')).toMatchObject({

@@ -136,7 +136,11 @@ const sortOptions = computed(() => [
 const selectedSources = computed(() =>
   sources.value.filter((s) => form.value.source_ids.includes(s.id)),
 );
-const hasNonPublic = computed(() => selectedSources.value.some((s) => s.visibility !== 'public'));
+const hasRestrictedSources = computed(() =>
+  selectedSources.value.some(
+    (s) => s.visibility !== 'public' || s.local === true || s.provider === 'local',
+  ),
+);
 
 function toggleMode(mode: DisplayMode, on: boolean): void {
   const set = new Set(form.value.allowed_modes);
@@ -364,7 +368,7 @@ watch(previewMode, () => void renderPreview());
                 </q-item>
               </template>
             </q-select>
-            <p v-if="hasNonPublic && !form.preload" class="swc-callout is-info">
+            <p v-if="hasRestrictedSources && !form.preload" class="swc-callout is-info">
               {{ t('views.dynamicHint') }}
             </p>
             <div v-if="selectedSources.length > 0">
@@ -658,7 +662,11 @@ watch(previewMode, () => void renderPreview());
             <p class="swc-hint">{{ t('views.showNavigationHint') }}</p>
             <q-toggle v-model="form.preload" :label="t('views.preload')" />
             <p class="swc-hint">{{ t('views.preloadHint') }}</p>
-            <p v-if="form.preload && hasNonPublic" role="alert" class="swc-callout is-warning">
+            <p
+              v-if="form.preload && hasRestrictedSources"
+              role="alert"
+              class="swc-callout is-warning"
+            >
               {{ t('views.preloadPrivateWarning') }}
             </p>
             <q-input

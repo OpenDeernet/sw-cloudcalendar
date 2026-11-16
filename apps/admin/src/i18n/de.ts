@@ -620,7 +620,7 @@ const de = {
     copyShortcodeNamed: 'Shortcode von „{name}“ kopieren',
     dynamic: 'Dynamisch',
     dynamicHint:
-      'Ansichten mit nicht öffentlichen Quellen sind „dynamisch“: Sie werden im Browser per REST nachgeladen, damit öffentliche Seiten-Caches keine geschützten Termine speichern.',
+      'Ansichten mit nicht öffentlichen oder lokalen Quellen sind „dynamisch“: Sie werden im Browser per REST nachgeladen, damit öffentliche Seiten-Caches keine geschützten Termine speichern.',
     deleteTitle: 'Ansicht löschen?',
     deleteConsequence1: 'Shortcodes und Blöcke mit dieser Ansicht zeigen danach nichts mehr an.',
     deleted: 'Ansicht gelöscht.',
@@ -668,7 +668,7 @@ const de = {
       'Der Kalender wird ohne anfängliche AJAX-Anfrage mit der Seite ausgegeben. Die erste Anfrage füllt den HTML-Cache; weitere verwenden ihn für die eingestellte Dauer, wenn der HTML-Cache der Ansicht und global aktiviert ist. Geänderte lokale Termine können bis zum Ablauf veraltet bleiben. Navigation und Suche bleiben interaktiv.',
     preloadCacheMinutes: 'Vorablade-Cache-Dauer (Minuten, 60–10080)',
     preloadPrivateWarning:
-      'Diese Ansicht enthält private Quellen. Vorabladen schreibt berechtigte private Termine in das Seiten-HTML. Du bist dafür verantwortlich, diese Seite aus geteilten Seiten-/CDN-Caches auszuschließen oder diese pro Benutzer zu konfigurieren. Der Plugin-Cache ist nach Besuchern getrennt; Zugriffsrechte werden vor jeder Wiederverwendung geprüft.',
+      'Diese Ansicht enthält private Quellen oder lokale Quellen mit eigenen Adapterrechten. Vorabladen schreibt berechtigte private Termine in das Seiten-HTML. Du bist dafür verantwortlich, diese Seite aus geteilten Seiten-/CDN-Caches auszuschließen oder diese pro Benutzer zu konfigurieren. Der Plugin-Cache ist nach Besuchern getrennt; Zugriffsrechte werden vor jeder Wiederverwendung geprüft.',
     htmlCache: 'HTML-Cache verwenden',
     htmlCacheHint: 'Gilt nur, wenn der HTML-Cache auch global aktiviert ist.',
     sectionFilters: 'Standardfilter',

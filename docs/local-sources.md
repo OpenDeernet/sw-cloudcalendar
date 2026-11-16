@@ -115,7 +115,7 @@ private Kalender und benutzerabhängige Rechte in `canReadCalendar()` durchsetze
 Lokale Ansichten verwenden standardmäßig keinen geteilten HTML-/HTTP-Cache. Auf der WordPress-Seite erscheint ein Platzhalter;
 der Browser lädt die autorisierte Ausgabe über REST (`no-store`). Dadurch bleiben auch zwischengespeicherte Seiten
 bei Kalenderentfernung oder Rechteänderung sicher. JavaScript ist für diese eingebetteten Live-Ansichten erforderlich.
-Synchronisierte Quellen behalten ihren bisherigen Cachepfad. API v1 liefert keinen verlässlichen Revisionsvertrag. Als bewusste Ausnahme erlaubt die Ansichtsoption **Erste Ansicht mit der Seite laden** einen zeitlich begrenzten, besucherspezifischen HTML-Cache (mindestens 60 Minuten). Berechtigungen werden vor jedem Cachetreffer geprüft; lokale Terminänderungen können bis zum Ablauf veraltet bleiben. Der Betreiber verantwortet Seiten-Caches und erhält bei privaten Quellen eine Warnung. Details: [Vorabladen](setup.md#preload-the-initial-view-issue-31).
+Synchronisierte Quellen behalten ihren bisherigen Cachepfad. API v1 liefert keinen verlässlichen Revisionsvertrag. Als bewusste Ausnahme erlaubt die Ansichtsoption **Erste Ansicht mit der Seite laden** einen zeitlich begrenzten, besucherspezifischen HTML-Cache (mindestens 60 Minuten). Berechtigungen werden vor jedem Cachetreffer geprüft; lokale Terminänderungen können bis zum Ablauf veraltet bleiben. Der Betreiber verantwortet Seiten-Caches und erhält bei privaten und lokalen Quellen eine Warnung, auch wenn eine lokale Quelle in CloudCalendar als öffentlich markiert ist. Details: [Vorabladen](setup.md#preload-the-initial-view-issue-31).
 
 Vorhandene Bilder werden direkt referenziert. Geschützte Anhänge und neue Datei-Downloads sind nicht Teil von API v1.
 
