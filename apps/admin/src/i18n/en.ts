@@ -643,10 +643,17 @@ const en: typeof de = {
     formatHint: 'PHP date format. Empty = WordPress setting ({format}).',
     primaryColor: 'Primary colour',
     primaryColorReset: 'Use default',
-    primaryColorHint: 'Colours the display mode tabs and the “Search” button of this view. Default: theme colours.',
+    primaryColorHint:
+      'Colours the display mode tabs and the “Search” button of this view. Default: theme colours.',
     showNavigation: 'Show navigation',
     showNavigationHint:
       'Month view: “Previous month” / “Next month”. List and cards: “Earlier events” / “More events”. Can be overridden in the shortcode with navigation="false" or "true".',
+    preload: 'Preload initial view with the page',
+    preloadHint:
+      'Render the calendar with the page, without an initial AJAX request. The first request fills the HTML cache; subsequent requests reuse it for the configured duration when view and global HTML caching are enabled. Changed local events may remain stale until expiry. Navigation and search remain interactive.',
+    preloadCacheMinutes: 'Preload cache duration (minutes, 60–10080)',
+    preloadPrivateWarning:
+      'This view includes private sources. Preloading places authorized private events in the page HTML. You are responsible for excluding this page from shared page/CDN caches or configuring them per user. The plugin cache is separated per visitor and access is rechecked before reuse.',
     htmlCache: 'Use HTML cache',
     htmlCacheHint: 'Only applies if the HTML cache is enabled globally as well.',
     sectionFilters: 'Default filters',

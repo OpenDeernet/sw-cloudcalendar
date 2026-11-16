@@ -24,6 +24,20 @@ async function login(p, user, pass) {
 
 // Guest
 let [c, p] = await ctx();
+let preloadAjax = 0;
+const countPreload = (request) => { if (/sw-cloudcalendar\/v1\/views\/.*render|sw_calendar_rest_nonce/.test(request.url())) preloadAjax += 1; };
+p.on('request', countPreload);
+const preloadResponse = await p.goto(base + '/preload/');
+const preloadMarkup = await preloadResponse.text();
+await p.waitForLoadState('networkidle');
+check('preloaded local events are in the initial page source', preloadMarkup.includes('Preloaded local event') && !preloadMarkup.includes('swc-dynamic'));
+check('preloaded local view needs no initial AJAX', preloadAjax === 0);
+const preloadAgain = await p.goto(base + '/preload/');
+check('preloaded HTML survives a second page request', (await preloadAgain.text()).includes('Preloaded local event'));
+await p.screenshot({ path: `${out}/preloaded-local.png`, fullPage: true });
+p.off('request', countPreload);
+const privateGuest = await p.goto(base + '/private-preload/');
+check('guest cannot see private preloaded events', !(await privateGuest.text()).includes('swc-events__item'));
 await p.goto(base + '/liste/'); await p.waitForLoadState('networkidle');
 check('guest list renders events', (await p.locator('.swc-events__item').count()) > 0);
 await p.screenshot({ path: `${out}/guest-list.png`, fullPage: true });
@@ -87,6 +101,22 @@ await c.close();
 // Admin SPA
 [c, p] = await ctx();
 await login(p, 'admin', 'e2e-admin-pass');
+const privateAdmin = await p.goto(base + '/private-preload/');
+const privateMarkup = await privateAdmin.text();
+check('authorized private events are included in initial page HTML', privateMarkup.includes('swc-events__item'));
+const privatePreloadView = privateMarkup.match(/data-swc-view="(\d+)"/)?.[1];
+await p.goto(`${base}/wp-admin/admin.php?page=sw-cloudcalendar#/views/${privatePreloadView}`);
+await p.waitForLoadState('networkidle');
+await p.waitForTimeout(1800);
+check('view editor warns about preloading private content', (await p.locator('[role="alert"]').allTextContents()).some((text) => /responsible|verantwortlich/.test(text)));
+check('view editor restores configured preload cache duration', await p.getByLabel(/Preload cache duration|Vorablade-Cache-Dauer/).inputValue() === '60');
+await p.screenshot({ path: `${out}/private-preload-warning.png`, fullPage: true });
+// Keep the new preload scenario independent of the existing plugin-management/admin-route scenario.
+await c.close();
+[c, p] = await ctx();
+await login(p, 'admin', 'e2e-admin-pass');
+
+
 // Verified updates are controlled only in the native WordPress plugin list.
 await p.goto(base + '/wp-admin/plugins.php');
 await p.waitForLoadState('networkidle');

@@ -112,11 +112,10 @@ Ansichtsquellen ∩ angeforderte Quellen ∩ CloudCalendar-ACL ∩ Adapterfreiga
 Berechtigungen dürfen durch Filter, Detailreferenzen oder Cachetreffer nicht erweitert werden. Das Quellplugin muss
 private Kalender und benutzerabhängige Rechte in `canReadCalendar()` durchsetzen.
 
-Lokale Ansichten verwenden keinen geteilten HTML-/HTTP-Cache. Auf der WordPress-Seite erscheint ein Platzhalter;
+Lokale Ansichten verwenden standardmäßig keinen geteilten HTML-/HTTP-Cache. Auf der WordPress-Seite erscheint ein Platzhalter;
 der Browser lädt die autorisierte Ausgabe über REST (`no-store`). Dadurch bleiben auch zwischengespeicherte Seiten
 bei Kalenderentfernung oder Rechteänderung sicher. JavaScript ist für diese eingebetteten Live-Ansichten erforderlich.
-Synchronisierte Quellen behalten ihren bisherigen Cachepfad. Ein künftiger Cache für lokale Quellen benötigt einen
-zusätzlichen verlässlichen Revisionsvertrag; API v1 verwendet bewusst keinen dauerhaften Eventcache.
+Synchronisierte Quellen behalten ihren bisherigen Cachepfad. API v1 liefert keinen verlässlichen Revisionsvertrag. Als bewusste Ausnahme erlaubt die Ansichtsoption **Erste Ansicht mit der Seite laden** einen zeitlich begrenzten, besucherspezifischen HTML-Cache (mindestens 60 Minuten). Berechtigungen werden vor jedem Cachetreffer geprüft; lokale Terminänderungen können bis zum Ablauf veraltet bleiben. Der Betreiber verantwortet Seiten-Caches und erhält bei privaten Quellen eine Warnung. Details: [Vorabladen](setup.md#preload-the-initial-view-issue-31).
 
 Vorhandene Bilder werden direkt referenziert. Geschützte Anhänge und neue Datei-Downloads sind nicht Teil von API v1.
 

@@ -166,3 +166,7 @@ preview images. Local view responses use `no-store`; all view/source/adapter res
 New filters: `color_titles`, `legend` (boolean), `columns` (1–4), `day_limit` (1–20), `navigation_group`
 (`[A-Za-z0-9_-]`, 1–64 chars). `month` also restricts list/card queries to that month.
 See [local-sources.md](local-sources.md) for the adapter contract.
+
+### View preload settings
+
+Admin view GET/POST/PUT expose `preload` (boolean, default `false`) and `preload_cache_minutes` (integer, 60–10080, default `60`). Partial updates preserve existing values; invalid values return field validation errors. `dynamic` indicates whether the embedding still needs a REST placeholder, so it is false when preloading is enabled. Private/local preloaded output uses a visitor-specific plugin cache; private/local REST responses remain `no-store`. See [setup and page-cache responsibility](setup.md#preload-the-initial-view-issue-31).

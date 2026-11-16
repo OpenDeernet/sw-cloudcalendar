@@ -658,10 +658,17 @@ const de = {
     formatHint: 'PHP-Datumsformat. Leer = WordPress-Einstellung ({format}).',
     primaryColor: 'Primärfarbe',
     primaryColorReset: 'Standard verwenden',
-    primaryColorHint: 'Färbt die Umschalter der Darstellungsform und den Button „Suchen“ dieser Ansicht. Standard: Farben des Designs.',
+    primaryColorHint:
+      'Färbt die Umschalter der Darstellungsform und den Button „Suchen“ dieser Ansicht. Standard: Farben des Designs.',
     showNavigation: 'Navigation anzeigen',
     showNavigationHint:
       'Monatsansicht: „Vorheriger Monat“ / „Nächster Monat“. Liste und Karten: „Frühere Termine“ / „Weitere Termine“. Im Shortcode mit navigation="false" bzw. "true" überschreibbar.',
+    preload: 'Erste Ansicht mit der Seite laden',
+    preloadHint:
+      'Der Kalender wird ohne anfängliche AJAX-Anfrage mit der Seite ausgegeben. Die erste Anfrage füllt den HTML-Cache; weitere verwenden ihn für die eingestellte Dauer, wenn der HTML-Cache der Ansicht und global aktiviert ist. Geänderte lokale Termine können bis zum Ablauf veraltet bleiben. Navigation und Suche bleiben interaktiv.',
+    preloadCacheMinutes: 'Vorablade-Cache-Dauer (Minuten, 60–10080)',
+    preloadPrivateWarning:
+      'Diese Ansicht enthält private Quellen. Vorabladen schreibt berechtigte private Termine in das Seiten-HTML. Du bist dafür verantwortlich, diese Seite aus geteilten Seiten-/CDN-Caches auszuschließen oder diese pro Benutzer zu konfigurieren. Der Plugin-Cache ist nach Besuchern getrennt; Zugriffsrechte werden vor jeder Wiederverwendung geprüft.',
     htmlCache: 'HTML-Cache verwenden',
     htmlCacheHint: 'Gilt nur, wenn der HTML-Cache auch global aktiviert ist.',
     sectionFilters: 'Standardfilter',

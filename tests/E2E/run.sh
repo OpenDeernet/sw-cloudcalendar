@@ -12,6 +12,8 @@ WORK="$(cd "$WORK" && pwd)"
 export SWC_E2E_WP="$WORK/wp"
 rm -rf "$SWC_E2E_WP" "$WORK/wp-private" && cp -r "$ROOT/tests/wp/vendor/johnpbloch/wordpress-core" "$SWC_E2E_WP"
 mkdir -p "$SWC_E2E_WP/wp-content/plugins" "$WORK/shots" && ln -s "$ROOT" "$SWC_E2E_WP/wp-content/plugins/sw-cloudcalendar"
+mkdir -p "$SWC_E2E_WP/wp-content/mu-plugins"
+cp "$ROOT/tests/E2E/preload-adapter.php" "$SWC_E2E_WP/wp-content/mu-plugins/swc-preload-fixture.php"
 MYSQL_PWD="${SWC_TEST_DB_PASSWORD:-swc}" mariadb --host="${SWC_TEST_DB_HOST:-127.0.0.1}" \
   --port="${SWC_TEST_DB_PORT:-33078}" --user="${SWC_TEST_DB_USER:-swc}" -e "DROP DATABASE IF EXISTS swc_e2e; CREATE DATABASE swc_e2e CHARACTER SET utf8mb4"
 cat > "$SWC_E2E_WP/wp-config.php" <<CONFIG
@@ -41,3 +43,5 @@ done
 curl --silent --fail "http://127.0.0.1:$PORT/" >/dev/null
 export PW_DIR="${PW_DIR:-$ROOT/tests/E2E/node_modules}"
 node "$ROOT/tests/E2E/browser.mjs" "$WORK/shots" | tee "$WORK/result.txt"
+
+php "$ROOT/tests/E2E/check-preload-cache.php" | tee -a "$WORK/result.txt"

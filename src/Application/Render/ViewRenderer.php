@@ -30,10 +30,10 @@ use SW\Calendar\Support\ClockInterface;
 
 /**
  * The single read path for shortcode, block and REST (SPECIFICATIONS.md §10.3): authorize sources, resolve filter
- * and window, query local data only, render templates, optionally use the HTML cache for public scopes.
+ * and window, query local data only, render templates, optionally cache public scopes or explicitly preloaded visitor scopes.
  *
  * `effective_source_ids = view_source_ids ∩ requested_source_ids ∩ authorized_source_ids` is computed BEFORE any
- * cache lookup; private scopes are never cached.
+ * cache lookup; preloaded private/local scopes use a visitor-specific cache and still recheck access on every read.
  */
 final class ViewRenderer
 {
@@ -63,12 +63,12 @@ final class ViewRenderer
 
     /**
      * Whether the view contains sources that are not public. Such views are rendered through the non-cacheable REST
-     * endpoint instead of being serialized into (potentially publicly cached) page HTML (SPECIFICATIONS.md §9.3).
+     * endpoint unless an operator explicitly enables preloading (docs/decisions.md D-31).
      */
     public function requiresDynamicLoading(int $viewId): bool
     {
         $view = $this->views->find($viewId);
-        return $view !== null && $view->enabled && $this->containsRestricted($view);
+        return $view !== null && $view->enabled && !$view->preload && $this->containsRestricted($view);
     }
 
     private function containsRestricted(CalendarView $view): bool
@@ -123,11 +123,14 @@ final class ViewRenderer
         // "Public" is a property of the whole view: if it contains any restricted source the output depends on the
         // user and must never be shared through HTTP caches, even if this user only sees the public part.
         $public = $allowed !== [] && $this->allPublic($sources) && !$this->containsRestricted($view);
-        $cacheable = $view->id > 0 && $allowed !== [] && $this->allPublic($sources) && $view->htmlCache && $this->settings->htmlCacheEnabled && !$this->containsLive($view);
-        $cacheKey = $cacheable ? $this->cacheKey($view, $sources, $filter, $mode, [$container, $event], $tz) : '';
+        $cacheable = $view->id > 0 && $allowed !== [] && $view->htmlCache && $this->settings->htmlCacheEnabled
+            && ($view->preload || ($this->allPublic($sources) && !$this->containsLive($view)));
+        // Local adapters may authorize visitors differently even on a public CloudCalendar source.
+        $scope = $view->preload && (!$public || $this->containsLive($view)) ? 'user:' . ($userId ?? 0) : 'public';
+        $cacheKey = $cacheable ? $this->cacheKey($view, $sources, $filter, $mode, [$container, $event], $tz, $scope) : '';
         if ($cacheable) {
             $hit = $this->cache->get($cacheKey);
-            $cached = $hit === null ? null : RenderResult::fromCache($hit);
+            $cached = $hit === null ? null : RenderResult::fromCache($hit, $public);
             if ($cached !== null) {
                 return $cached;
             }
@@ -205,7 +208,8 @@ final class ViewRenderer
             $found['total'],
         );
         if ($cacheable) {
-            $this->cache->set($cacheKey, $result->toJson(), $this->ttl($now, $range, $items, $tz));
+            $ttl = $view->preload ? max(60, min(10080, $view->preloadCacheMinutes)) * 60 : $this->ttl($now, $range, $items, $tz);
+            $this->cache->set($cacheKey, $result->toJson(), $ttl);
         }
         return $result;
     }
@@ -559,7 +563,7 @@ final class ViewRenderer
      * @param array<int, Source>     $sources
      * @param list<ResolvedTemplate> $templates
      */
-    private function cacheKey(CalendarView $view, array $sources, RenderFilter $filter, DisplayMode $mode, array $templates, \DateTimeZone $tz): string
+    private function cacheKey(CalendarView $view, array $sources, RenderFilter $filter, DisplayMode $mode, array $templates, \DateTimeZone $tz, string $scope): string
     {
         $revisions = [];
         foreach ($sources as $source) {
@@ -577,7 +581,7 @@ final class ViewRenderer
             'locale' => $this->settings->locale,
             'tz' => $tz->getName(),
             'week_start' => $this->settings->weekStart,
-            'scope' => 'public',
+            'scope' => $scope,
             'engine' => TemplateCompiler::ENGINE_VERSION,
         ];
         return 'swc:html:' . hash('sha256', (string) json_encode($parts));
