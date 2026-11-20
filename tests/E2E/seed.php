@@ -48,3 +48,15 @@ foreach ( array( 'liste' => "[sw_calendar id=\"$list\" limit=\"8\"]", 'karten' =
 }
 flush_rewrite_rules();
 echo "views $list $month $mixed (cards event template " . ( null === $cards_event ? '0' : $cards_event ) . ")\n";
+
+// Explicit preload fixture: a local source that normally requires an AJAX placeholder.
+$local_connection = $services->connections()->create( Provider::Local, 'Local preload', AuthMode::None, ConnectionStatus::Connected, array( 'adapter' => 'e2e-preload' ) );
+$local = $sources->create( $local_connection, 'local', 'Local preload', '#2271b1', 'UTC', Visibility::Public, array(), new SourceSettings() );
+$sources->update( $local, 'Local preload', '#2271b1', 'UTC', Visibility::Public, array(), new SourceSettings(), SourceStatus::Active );
+$preload = $views->save( null, 'Preloaded', true, array( 'source_ids' => array( $local ), 'preload' => true, 'preload_cache_minutes' => 120, 'html_cache' => true ) );
+$private_preload = $views->save( null, 'Private preload', true, array( 'source_ids' => array( $restricted ), 'preload' => true, 'preload_cache_minutes' => 60, 'html_cache' => true ) );
+foreach ( array( 'preload' => $preload, 'private-preload' => $private_preload ) as $slug => $id ) {
+	wp_insert_post( array( 'post_type' => 'page', 'post_status' => 'publish', 'post_title' => $slug, 'post_name' => $slug, 'post_content' => '[sw_calendar id="' . $id . '"]' ) );
+}
+update_option( 'swc_e2e_preload_view', $preload );
+update_option( 'swc_e2e_private_preload_view', $private_preload );

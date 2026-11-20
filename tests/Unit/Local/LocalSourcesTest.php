@@ -209,7 +209,7 @@ final class LocalSourcesTest extends TestCase
         self::assertFalse($query->canRead($sources->find(1), null));
         self::assertNull($query->findById(EventReference::local(1, 'item')));
         $range = QueryRange::fromLocal(new \DateTimeImmutable('2026-11-01'), new \DateTimeImmutable('2026-12-01'));
-        self::assertSame(['items' => [], 'total' => 0], $query->find([1], $range, null, null, [], false, 10, 0, 0));
+        self::assertSame(['items' => [], 'total' => 0, 'complete' => false], $query->find([1], $range, null, null, [], false, 10, 0, 0));
         self::assertCount(3, $logger->records);
         self::assertStringNotContainsString('Secret', (string) json_encode($logger->records));
     }
@@ -224,7 +224,7 @@ final class LocalSourcesTest extends TestCase
         $connections->add(new Connection(2, Provider::Ics, 'Feed', AuthMode::None, ConnectionStatus::Connected, null, []));
         $query = new LocalOccurrenceQuery($this->createMock(OccurrenceQueryInterface::class), $sources, $connections, new LocalSourceRegistry());
         $range = QueryRange::fromLocal(new \DateTimeImmutable('2026-11-01'), new \DateTimeImmutable('2026-12-01'));
-        self::assertSame(['items' => [], 'total' => 0], $query->find([1], $range, null, null, [], false, 10, 0, 0));
+        self::assertSame(['items' => [], 'total' => 0, 'complete' => false], $query->find([1], $range, null, null, [], false, 10, 0, 0));
         self::assertFalse($query->canRead($sources->find(1), null));
         self::assertNull($query->findById(EventReference::local(999, 'item')));
         $this->expectException(CalendarException::class);
@@ -237,5 +237,38 @@ final class LocalSourcesTest extends TestCase
         self::assertSame('Europe/Berlin', $event->occurrence(1)->timezone);
         $this->expectException(\Exception::class);
         new LocalEvent('id', 'calendar', 'Title', new \DateTimeImmutable('2026-11-01'), new \DateTimeImmutable('2026-11-02'), timezone: 'Invalid/TimeZone');
+    }
+    public function testDisconnectedLocalSourcesMarkTheQueryIncomplete(): void
+    {
+        $sources = new InMemorySources();
+        $sources->add(TestData::source());
+        $connections = new InMemoryConnections();
+        $connections->add(new Connection(1, Provider::Local, 'Plugin', AuthMode::None, ConnectionStatus::Disconnected, null, ['adapter' => 'example']));
+        $stored = $this->createMock(OccurrenceQueryInterface::class);
+        $stored->expects(self::once())->method('find')->with([])->willReturn(['items' => [], 'total' => 0]);
+        $query = new LocalOccurrenceQuery($stored, $sources, $connections, new LocalSourceRegistry());
+        $range = QueryRange::fromLocal(new \DateTimeImmutable('2026-11-01'), new \DateTimeImmutable('2026-12-01'));
+        self::assertSame(['items' => [], 'total' => 0, 'complete' => false], $query->find([1], $range, null, null, [], false, 10, 0, 0));
+    }
+
+    public function testIncompleteStoredResultsStayIncompleteWhenMergedWithLocalSources(): void
+    {
+        $sources = new InMemorySources();
+        $sources->add(TestData::source());
+        $sources->add(TestData::source(2, connectionId: 2));
+        $connections = new InMemoryConnections();
+        $connections->add(new Connection(1, Provider::Local, 'Plugin', AuthMode::None, ConnectionStatus::Connected, null, ['adapter' => 'example']));
+        $connections->add(new Connection(2, Provider::Ics, 'Feed', AuthMode::None, ConnectionStatus::Connected, null, []));
+        $stored = $this->createMock(OccurrenceQueryInterface::class);
+        $stored->method('find')->willReturn(['items' => [], 'total' => 0, 'complete' => false]);
+        $adapter = $this->createMock(LocalEventSourceInterface::class);
+        $adapter->method('query')->willReturn(new LocalEventPage([$this->event()], 1));
+        $registry = new LocalSourceRegistry();
+        $registry->register('example', $adapter);
+        $query = new LocalOccurrenceQuery($stored, $sources, $connections, $registry);
+        $range = QueryRange::fromLocal(new \DateTimeImmutable('2026-11-01'), new \DateTimeImmutable('2026-12-01'));
+        $result = $query->find([1, 2], $range, null, null, [], false, 10, 0, 0);
+        self::assertFalse($result['complete']);
+        self::assertCount(1, $result['items']);
     }
 }

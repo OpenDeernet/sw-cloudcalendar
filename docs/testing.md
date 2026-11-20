@@ -65,3 +65,19 @@ Details, Grenzen und Referenzmessung: [tests/Performance/README.md](../tests/Per
 ## Verifizierte GitHub-Updates
 
 Update-spezifische Prüfungen, isolierte native Upgrader und Docker-Browserprüfungen: [Verifikationsbericht](GITHUB-UPDATES-VERIFIKATION.md). Betriebsregeln und Schlüsselbefehle: [Betriebshandbuch](GITHUB-UPDATES-BETRIEB.md). CI-Suiten laufen ausschließlich auf Pull Requests; DB-Suiten mit gemeinsamem Zustand sequenziell.
+
+## Initial view preloading (#31)
+
+`PreloadViewTest` covers opt-in/legacy defaults, REST round trips and partial updates, invalid/minimum/maximum durations, inline HTML, long transient TTL and expiry, source/adapter access checks, private visitor separation, non-public cache results, invalidation, filters and disabled caches/views. Admin tests cover saving duration and warnings for private sources and public local sources (both local flag and provider detection); synchronized public sources show no warning. Docker E2E loads a real local adapter twice, checks initial page HTML without startup AJAX and verifies the adapter was queried only for the first render. Guest and authorized private-page responses are checked separately.
+
+Manual check: edit a View, enable **Preload initial view with the page**, set **120 minutes**, leave view/global HTML caches enabled and save. Load the embedding page and inspect its source: event markup should already be present and no initial `/render` request should occur. Reload: the same HTML should be reused. Clear the plugin cache to rebuild. With a private or local source selected the warning must appear; configure the embedding page’s page/CDN cache per user or exclude it before using this option.
+
+Local verification (16 November 2026): 196 unit/integration tests, 286 WordPress tests (1,604 assertions), 193 JS/TS tests and 38 Docker browser checks passed. Line coverage: PHP 89.75%, JS/TS 83.57%. PHPStan 8, WPCS, ESLint, TypeScript, admin build and translation checks passed; existing PSR-12 warnings remain unchanged. The browser preload scenario uses its own session, and the login helper waits for the actual backend redirect before authenticated navigation to avoid cancelling form submission. The initial PR #44 CI and SonarQube runs also passed; automated review identified the missing warning for public local sources, addressed with dedicated UI regression cases. No publication was performed.
+
+Review follow-up for PR #44: the editor now warns for every selected local source, even when its CloudCalendar visibility is public, because adapter permissions can be visitor-specific. Regression cases cover both the `local` flag and `provider: local`, plus synchronized-public views without a warning. All 195 JS/TS tests, ESLint, TypeScript and the admin build passed; JS/TS line coverage is 83.58%.
+
+The review follow-up Docker run passed all 38 checks after synchronizing login with the backend redirect; server logs confirmed login POSTs before protected navigation.
+
+A second automated-review finding is addressed by propagating optional `complete: false` query metadata through pagination (including navigation probes) and skipping HTML cache writes for partial adapter failures. Regression tests cover local-only and mixed-source failures/recovery, forward/backward pages, navigation-only failures, legitimately empty calendars, disconnected sources and incomplete upstream results. The HTML cache key version invalidates older entries that may contain partial results.
+
+After the second review correction: 198 unit/integration tests (550 assertions), 292 WordPress tests (1,635 assertions) and all 38 Docker browser checks passed. PHP line coverage is 89.78%; PHPStan 8 and both PHP linters passed (existing PSR-12 warnings unchanged). Frontend results remain 195 passing tests and 83.58% line coverage.
