@@ -36,7 +36,8 @@ final class RenderResult
         return (string) json_encode(['h' => $this->html, 'c' => $this->css, 't' => $this->total]);
     }
 
-    public static function fromCache(string $json): ?self
+    /** Restore markup; the caller supplies its current access classification rather than trusting cached metadata. */
+    public static function fromCache(string $json, bool $public = true): ?self
     {
         $data = json_decode($json, true);
         if (!is_array($data) || !is_string($data['h'] ?? null) || !is_array($data['c'] ?? null)) {
@@ -48,6 +49,6 @@ final class RenderResult
                 $css[$scope] = $value;
             }
         }
-        return new self(self::OK, $data['h'], $css, true, true, [], (int) ($data['t'] ?? 0));
+        return new self(self::OK, $data['h'], $css, true, $public, [], (int) ($data['t'] ?? 0));
     }
 }

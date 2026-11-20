@@ -48,6 +48,14 @@ const name = ref('');
 const kind = ref<TemplateKind>('event');
 const mode = ref<EditorMode>('html');
 const body = ref('');
+/** CSS custom properties available in template CSS (documented in the CSS tab). */
+const CSS_VARIABLES = [
+  '--swc-primary',
+  '--swc-primary-text',
+  '--swc-event-color',
+  '--swc-event-text',
+] as const;
+
 const css = ref('');
 const schema = ref<VisualSchema | null>(null);
 const dirty = ref(false);
@@ -292,6 +300,40 @@ async function doDelete(): Promise<void> {
   }
 }
 
+/* ---------- reset to the preset the template was created from ---------- */
+const resetPart = ref<'markup' | 'css' | null>(null);
+const resetOpen = ref(false);
+const resetting = ref(false);
+const resetError = ref<string | null>(null);
+const canReset = computed(() => stored.value?.preset_key != null && stored.value.preset_key !== '');
+function askReset(part: 'markup' | 'css'): void {
+  resetPart.value = part;
+  resetError.value = null;
+  resetOpen.value = true;
+}
+async function doReset(): Promise<void> {
+  const key = stored.value?.preset_key;
+  if (!key || !resetPart.value) return;
+  resetting.value = true;
+  resetError.value = null;
+  try {
+    const preset = (await api.templates.presets()).find((p) => p.key === key);
+    const part = preset?.templates[kind.value];
+    if (!part) {
+      resetError.value = t('templates.resetMissing', { key });
+      return;
+    }
+    if (resetPart.value === 'markup') body.value = part.body;
+    else css.value = part.css;
+    resetOpen.value = false;
+    notify.success(t('templates.resetDone'));
+  } catch (e) {
+    resetError.value = toApiError(e).message;
+  } finally {
+    resetting.value = false;
+  }
+}
+
 function insertPlaceholder(placeholder: string, sigil: '' | '#' | '^'): void {
   tab.value = 'markup';
   void nextTick(() => htmlEditor.value?.insertPlaceholder(placeholder, sigil));
@@ -444,6 +486,11 @@ const previewModes = computed(() =>
                 :min-height="420"
               />
               <p class="swc-hint">{{ t('templates.syntaxHint') }}</p>
+              <p v-if="canReset && mode === 'html'" class="swc-hint">
+                <a href="#" class="swc-te__reset" @click.prevent="askReset('markup')">{{
+                  t('templates.reset')
+                }}</a>
+              </p>
             </div>
             <div v-show="tab === 'css'" class="swc-te__pane">
               <CodeEditor
@@ -453,6 +500,23 @@ const previewModes = computed(() =>
                 :min-height="300"
               />
               <p class="swc-hint">{{ t('templates.cssHint') }}</p>
+              <section class="swc-te__cssvars" :aria-label="t('templates.cssVarsTitle')">
+                <h3 class="swc-te__cssvars-title">{{ t('templates.cssVarsTitle') }}</h3>
+                <p class="swc-hint">{{ t('templates.cssVarsHint') }}</p>
+                <dl class="swc-te__cssvars-list">
+                  <template v-for="v in CSS_VARIABLES" :key="v">
+                    <dt>
+                      <code class="swc-mono">{{ v }}</code>
+                    </dt>
+                    <dd>{{ t(`templates.cssVars.${v}`) }}</dd>
+                  </template>
+                </dl>
+              </section>
+              <p v-if="canReset" class="swc-hint">
+                <a href="#" class="swc-te__reset" @click.prevent="askReset('css')">{{
+                  t('templates.reset')
+                }}</a>
+              </p>
             </div>
 
             <section class="swc-te__validation" :aria-label="t('templates.validation')">
@@ -586,6 +650,22 @@ const previewModes = computed(() =>
       @confirm="newVisual"
     />
     <ConfirmDialog
+      v-model="resetOpen"
+      :danger="false"
+      :title="t('templates.resetTitle')"
+      :message="
+        t(resetPart === 'css' ? 'templates.resetCssText' : 'templates.resetMarkupText', {
+          key: stored?.preset_key ?? '',
+        })
+      "
+      :target="name || t('templates.untitled')"
+      :consequences="[t('templates.resetC1')]"
+      :confirm-label="t('templates.reset')"
+      :loading="resetting"
+      :error="resetError"
+      @confirm="doReset"
+    />
+    <ConfirmDialog
       v-model="deleteOpen"
       :title="t('templates.deleteTitle')"
       :target="stored ? `${stored.name} (${t(`templates.kinds.${stored.kind}`)})` : undefined"
@@ -599,6 +679,10 @@ const previewModes = computed(() =>
 </template>
 
 <style scoped>
+.swc-te__cssvars { margin-top: 12px; }
+.swc-te__cssvars-title { margin: 0 0 4px; font-size: 0.9rem; }
+.swc-te__cssvars-list { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 8px 0 0; }
+.swc-te__cssvars-list dt, .swc-te__cssvars-list dd { margin: 0; }
 .swc-te__meta {
   display: flex;
   align-items: flex-end;

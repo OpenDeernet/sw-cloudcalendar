@@ -1,12 +1,12 @@
 # SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR SW CloudCalendar contributors
+# Copyright (C) YEAR Stefan Warnat
 # This file is distributed under the same license as the sw-cloudcalendar package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: sw-cloudcalendar 1.0.0\n"
+"Project-Id-Version: sw-cloudcalendar 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
@@ -179,11 +179,165 @@ msgstr ""
 msgid "Every five minutes (SW CloudCalendar)"
 msgstr ""
 
-#: src/Plugin.php:128
+#: src/Infrastructure/WordPress/Update/Manifest.php:46
+msgid "Release verification failed. The release was not accepted."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Package.php:30
+msgid "ZIP size or SHA-256 does not match, or ZIP verification is unavailable."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Package.php:34
+msgid "Invalid ZIP archive."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Package.php:40
+msgid "The update package failed the safety checks."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:68
+msgid "Manual updates only"
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:88
+msgid "GitHub installation is only allowed manually in the WordPress backend."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:92
+msgid "Automatic GitHub installation is blocked."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:111
+msgid "No valid manual WordPress update request."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:214
+msgid "Signed GitHub release. Install only manually through WordPress."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:232
+msgid "Check for updates now"
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:243
+msgid "GitHub updates are blocked: no public release key is configured."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:247
+msgid "No verified update check yet."
+msgstr ""
+
+#. translators: %s: time span, e.g. "2 hours"
+#: src/Infrastructure/WordPress/Update/Provider.php:250
+#, php-format
+msgid "Last verified check: %s ago."
+msgstr ""
+
+#. translators: %s: error message
+#: src/Infrastructure/WordPress/Update/Provider.php:254
+#, php-format
+msgid "Last error: %s"
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:290
+msgid "Checking signed releases …"
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:291
+msgid "Check finished."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Provider.php:292
+msgid "GitHub could not be reached. Please try again later."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:51
+msgid "Update checks are only allowed in an authorised backend session."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:54
+msgid "No public release key or Sodium is available. GitHub updates are blocked."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:58
+msgid "An update check is already running."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:64
+msgid "The last update check is still within the check interval."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:71
+msgid "The check took too long. The result was not adopted."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:79
+msgid "Signed release information verified. Install updates only through the WordPress plugin list."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:81
+msgid "Invalid release response."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:103
+msgid "No valid stable release response."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:112
+msgid "Release manifest or signature is missing."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:128
+msgid "An already verified newer version must not be rolled back."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:150
+msgid "Please check for updates again before installing."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:157
+msgid "Outdated release offer."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:178
+msgid "Package, version or system requirements do not match."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Service.php:186
+msgid "Temporary update file unavailable."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Transport.php:27
+msgid "Update address not allowed."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Transport.php:47
+msgid "GitHub could not be reached."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Transport.php:53
+msgid "Invalid redirect."
+msgstr ""
+
+#. translators: %d: HTTP status code
+#: src/Infrastructure/WordPress/Update/Transport.php:60
+#, php-format
+msgid "GitHub responded with HTTP %d."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Transport.php:65
+msgid "The update response exceeds the size limit."
+msgstr ""
+
+#: src/Infrastructure/WordPress/Update/Transport.php:69
+msgid "Too many update redirects."
+msgstr ""
+
+#: src/Plugin.php:152
 msgid "SW CloudCalendar"
 msgstr ""
 
-#: src/Plugin.php:130
+#: src/Plugin.php:154
 msgid "This site shows appointments from external calendars (Google Calendar, Microsoft 365, ICS feeds). Appointment data and, if enabled, attachments are copied to this site and kept until they leave the configured synchronisation window, the calendar source is deleted or the plugin data is removed. Visitors are not tracked by the calendar. Attachments are delivered by this site; no files are loaded from the cloud providers in the visitor's browser."
 msgstr ""
 
@@ -236,35 +390,35 @@ msgstr ""
 msgid "The calendar administration requires JavaScript."
 msgstr ""
 
-#: src/Presentation/Admin/TemplateManager.php:262
+#: src/Presentation/Admin/TemplateManager.php:279
 msgid "Container"
 msgstr ""
 
-#: src/Presentation/Admin/TemplateManager.php:263
+#: src/Presentation/Admin/TemplateManager.php:280
 msgid "Event"
 msgstr ""
 
-#: src/Presentation/Admin/TemplateManager.php:264
+#: src/Presentation/Admin/TemplateManager.php:281
 msgid "Detail"
 msgstr ""
 
-#: src/Presentation/Frontend/CalendarOutput.php:136
+#: src/Presentation/Frontend/CalendarOutput.php:150
 msgid "Back to the calendar"
 msgstr ""
 
-#: src/Presentation/Frontend/CalendarOutput.php:185
+#: src/Presentation/Frontend/CalendarOutput.php:199
 msgid "Close"
 msgstr ""
 
-#: src/Presentation/Frontend/CalendarOutput.php:186 src/Services.php:295
+#: src/Presentation/Frontend/CalendarOutput.php:200 src/Services.php:314
 msgid "Loading calendar…"
 msgstr ""
 
-#: src/Presentation/Frontend/CalendarOutput.php:187
+#: src/Presentation/Frontend/CalendarOutput.php:201
 msgid "The calendar could not be loaded."
 msgstr ""
 
-#: src/Presentation/Frontend/CalendarOutput.php:188
+#: src/Presentation/Frontend/CalendarOutput.php:202 src/Services.php:331
 msgid "Event details"
 msgstr ""
 
@@ -282,6 +436,7 @@ msgid "The requested item was not found."
 msgstr ""
 
 #: src/Presentation/Rest/BaseController.php:109
+#: src/Presentation/Rest/SourcesController.php:191
 msgid "The request was not permitted."
 msgstr ""
 
@@ -362,27 +517,36 @@ msgstr ""
 msgid "Another synchronisation is running."
 msgstr ""
 
-#: src/Presentation/Rest/PublicController.php:112
-#: src/Presentation/Rest/PublicController.php:129
+#: src/Presentation/Rest/PublicController.php:116
+#: src/Presentation/Rest/PublicController.php:133
 msgid "Calendar not found."
 msgstr ""
 
-#: src/Presentation/Rest/PublicController.php:115
-#: src/Presentation/Rest/PublicController.php:132
+#: src/Presentation/Rest/PublicController.php:119
+#: src/Presentation/Rest/PublicController.php:136
 #: src/Presentation/Rest/ViewsController.php:82
 msgid "Invalid filter parameters."
 msgstr ""
 
-#: src/Presentation/Rest/PublicController.php:153
+#: src/Presentation/Rest/PublicController.php:157
 msgid "Event not found."
 msgstr ""
 
-#: src/Presentation/Rest/PublicController.php:233
+#: src/Presentation/Rest/PublicController.php:237
 msgid "File not found."
 msgstr ""
 
-#: src/Presentation/Rest/SourcesController.php:92
+#: src/Presentation/Rest/SourcesController.php:119
+#: src/Presentation/Rest/SourcesController.php:177
 msgid "Source not found."
+msgstr ""
+
+#: src/Presentation/Rest/SourcesController.php:164
+msgid "Synchronization did not complete. Check the sync history for details."
+msgstr ""
+
+#: src/Presentation/Rest/SourcesController.php:188
+msgid "Local source unavailable."
 msgstr ""
 
 #: src/Presentation/Rest/TemplatesController.php:101
@@ -397,82 +561,138 @@ msgstr ""
 msgid "View not found."
 msgstr ""
 
-#: src/Services.php:281
+#: src/Services.php:300
 msgid "No events."
 msgstr ""
 
-#: src/Services.php:282
+#: src/Services.php:301
 msgid "Previous month"
 msgstr ""
 
-#: src/Services.php:283
+#: src/Services.php:302
 msgid "Next month"
 msgstr ""
 
-#: src/Services.php:284
+#: src/Services.php:303
 msgid "Calendar navigation"
 msgstr ""
 
-#: src/Services.php:285
+#: src/Services.php:304
 msgid "Images"
 msgstr ""
 
-#: src/Services.php:286
+#: src/Services.php:305
 msgid "Files"
 msgstr ""
 
 #. translators: %s: file name
-#: src/Services.php:288
+#: src/Services.php:307
 #, php-format
 msgid "Download %s"
 msgstr ""
 
-#: src/Services.php:289
+#: src/Services.php:308
 msgid "All day"
 msgstr ""
 
-#: src/Services.php:290
+#: src/Services.php:309
 msgid "Today"
 msgstr ""
 
 #. translators: %d: number of further events
-#: src/Services.php:292
+#: src/Services.php:311
 #, php-format
 msgid "%d more"
 msgstr ""
 
 #. translators: 1: date, 2: number of events
-#: src/Services.php:294
+#: src/Services.php:313
 #, php-format
 msgid "%1$s, %2$d events"
 msgstr ""
 
-#: src/Services.php:296
+#: src/Services.php:315
 msgid "Please enable JavaScript to see this calendar."
 msgstr ""
 
-#: src/Services.php:299
+#: src/Services.php:318
 msgid "Preview"
 msgstr ""
 
-#: src/Services.php:300
+#: src/Services.php:319
 msgid "Earlier events"
 msgstr ""
 
-#: src/Services.php:301
+#: src/Services.php:320
 msgid "More events"
 msgstr ""
 
-#: src/Services.php:302
+#: src/Services.php:321
 msgid "Event navigation"
 msgstr ""
 
-#. translators: 1: required PHP version, 2: current PHP version
-#: sw-cloudcalendar.php:35
-#, php-format
-msgid "SW CloudCalendar requires PHP %1$s or newer with the sodium extension. You are running PHP %2$s."
+#: src/Services.php:322
+msgid "Choose display"
 msgstr ""
 
-#: sw-cloudcalendar.php:58
+#: src/Services.php:323
+msgctxt "calendar display mode"
+msgid "List"
+msgstr ""
+
+#: src/Services.php:324
+msgctxt "calendar display mode"
+msgid "Cards"
+msgstr ""
+
+#: src/Services.php:325
+msgctxt "calendar display mode"
+msgid "Month"
+msgstr ""
+
+#: src/Services.php:326
+msgid "Search events"
+msgstr ""
+
+#: src/Services.php:327
+msgid "Search"
+msgstr ""
+
+#: src/Services.php:328
+msgid "Searches titles, descriptions and locations within the selected date range."
+msgstr ""
+
+#. translators: %d: number of matching events
+#: src/Services.php:330
+#, php-format
+msgid "%d events found"
+msgstr ""
+
+#: src/Services.php:332
+msgctxt "event details"
+msgid "Date"
+msgstr ""
+
+#: src/Services.php:333
+msgctxt "event details"
+msgid "Time"
+msgstr ""
+
+#: src/Services.php:334
+msgctxt "event details"
+msgid "Location"
+msgstr ""
+
+#: src/Services.php:335
+msgid "View image"
+msgstr ""
+
+#: sw-cloudcalendar.php:40
 msgid "SW CloudCalendar: the vendor directory is missing. Install the release package or run \"composer install\"."
+msgstr ""
+
+#. translators: 1: required PHP version, 2: current PHP version
+#: sw-cloudcalendar.php:63
+#, php-format
+msgid "SW CloudCalendar requires PHP %1$s or newer with the sodium extension. You are running PHP %2$s."
 msgstr ""

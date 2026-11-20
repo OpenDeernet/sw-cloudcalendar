@@ -1,8 +1,13 @@
 # SW CloudCalendar
 
 [![Release](https://img.shields.io/github/v/release/sw-wordpress/sw-cloudcalendar?sort=semver)](https://github.com/sw-wordpress/sw-cloudcalendar/releases)
+[![CI](https://github.com/sw-wordpress/sw-cloudcalendar/actions/workflows/tests.yml/badge.svg)](https://github.com/sw-wordpress/sw-cloudcalendar/actions/workflows/tests.yml)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=sw-wordpress_sw-cloudcalendar&metric=coverage)](https://sonarcloud.io/summary/overall?id=sw-wordpress_sw-cloudcalendar)
 [![SonarQube Issues](https://sonarcloud.io/api/project_badges/measure?project=sw-wordpress_sw-cloudcalendar&metric=vulnerabilities)](https://sonarcloud.io/project/issues?id=sw-wordpress_sw-cloudcalendar&impactSoftwareQualities=SECURITY&resolved=false)
+![PHPStan level 8](https://img.shields.io/badge/phpstan%20level-8%20of%209-brightgreen?style=flat-square&logo=php)
+![PHP 8.2+](https://img.shields.io/badge/PHP-8.2%2B-777bb4?style=flat-square&logo=php&logoColor=white)
+![WordPress 6.5+](https://img.shields.io/badge/WordPress-6.5%2B-21759b?style=flat-square&logo=wordpress&logoColor=white)
+[![License GPL-2.0-or-later](https://img.shields.io/badge/License-GPL--2.0--or--later-blue?style=flat-square)](https://www.gnu.org/licenses/gpl-2.0.html)
 
 Shows appointments from Google Calendar, Microsoft 365 and [ICS](https://en.wikipedia.org/wiki/ICalendar) feeds
 on your WordPress site, read-only. Events are copied to your site in the background and displayed as a list,
@@ -71,10 +76,16 @@ All WP-CLI commands: [docs/setup.md](docs/setup.md#operation).
 
 ### Deactivation and removal
 
-Deactivating keeps all data and only stops the scheduled tasks. Deleting the plugin also keeps everything unless
+Deactivating keeps calendar data, stops scheduled tasks and removes executable cached update offers for this plugin. Deleting the plugin also keeps everything unless
 **Delete all data on uninstall** is enabled under **Calendar → Settings**; then all tables, options, the plugin's
 own folder below `uploads/` and Google tokens (revoked) are removed. A folder set via
 `SW_CALENDAR_PRIVATE_STORAGE_PATH` is never deleted. On multisite, removal only covers the main site.
+
+## GitHub updates
+
+Signed GitHub updates are installed manually through **Plugins → Installed Plugins**. The plugin ships a locally configured public release key;
+operators must distribute this trust anchor to existing installations and configure protected signed releases before updates are available.
+[Setup, key commands, rotation and WordPress.org migration](docs/GITHUB-UPDATES-BETRIEB.md).
 
 ## Troubleshooting
 
@@ -97,9 +108,14 @@ AI agents must follow the project rules before changing code:
 - Decisions and open points: [docs/decisions.md](docs/decisions.md), further docs in [docs/](docs/)
 - README structure: [README-STANDARD.md](https://github.com/sw-wordpress/sw-securelogin/blob/master/docs/README-STANDARD.md)
 
+## Local plugin sources
+
+Other WordPress plugins can provide calendars directly without copying events. Registration API, schema, permissions
+and examples: [Local sources](docs/local-sources.md). ChurchTools Suite supplies its adapter externally.
+
 ## Development
 
-Requirements: PHP 8.2+, Composer, Node.js 18.18+ with npm, Make, MariaDB (test database), GNU gettext (translations)
+Requirements: PHP 8.2+, Composer, Node.js 22.22.2+ (Node 22 line) with npm, Make, MariaDB (test database), GNU gettext (translations)
 and Docker for the release build.
 
 ```sh
@@ -110,15 +126,22 @@ bin/test-db.sh start                         # private MariaDB on 127.0.0.1:3307
 
 composer check                               # cs, cs:wp, PHPStan and PHPUnit (unit + integration)
 composer test:wp                             # WordPress integration tests
+composer test:performance                    # 2000 events/month; JSON report (tests/Performance)
 bin/i18n.sh check                            # translations complete and up to date
 (cd apps/admin && npm run typecheck && npm run lint && npm test)
 
 bin/build-zip.sh                             # release ZIP in dist/
+make release VERSION=1.2.3                    # commit version, tag and atomically push to origin
 ```
+
+`make release VERSION=1.2.3` requires a clean working tree, a checked-out branch and an unused local/remote tag.
+It updates the plugin header and `SW_CALENDAR_VERSION`, commits the version change, creates an annotated tag and
+atomically pushes the branch and tag to `origin`, triggering the signed release workflow. Downgrades are rejected.
+Configure the protected release environment and signing key first; see the [release operations guide](docs/GITHUB-UPDATES-BETRIEB.md).
 
 Every change needs tests; line coverage must stay above 80 % for PHP and JavaScript/TypeScript.
 Details: [docs/development.md](docs/development.md), [docs/testing.md](docs/testing.md) (incl. browser tests),
-[docs/sonarqube.md](docs/sonarqube.md). GitHub Actions run all checks on every push.
+[docs/sonarqube.md](docs/sonarqube.md). GitHub Actions run test suites on pull requests; release tags only build, validate and sign artifacts.
 
 ## License
 

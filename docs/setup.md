@@ -25,6 +25,10 @@ New sources are drafts; only **Status → Active** synchronises and displays the
 whole source (public, logged-in users or selected roles). Showing a calendar that is private at the provider
 publicly requires an explicit confirmation, which is logged in the audit log.
 
+In **Views → Display & templates**, enable **Display tabs on the website** to let visitors choose among the allowed modes (off by default). **Show event search** is on by default for all display modes and searches titles, descriptions and locations within the selected date range across all result pages. Public controls also work without JavaScript; protected/local views require JavaScript unless preloading is explicitly enabled.
+
+Event details use a centered, scrollable dialog. **Preset (default)** provides a two-column layout with description, image and date/time facts; mobile uses one column. Existing custom detail templates remain unchanged.
+
 ## Shortcode
 
 ```text
@@ -34,16 +38,17 @@ publicly requires an explicit confirmation, which is logged in the audit log.
 [sw_calendar id="12" start="2026-11-01" end="2026-12-31" location="Kirche"]
 [sw_calendar id="12" template="7" show_images="true" show_attachments="false"]
 [sw_calendar id="12" navigation="false"]
+[sw_calendar id="12" mode_switcher="true" show_search="true"]
 ```
 
 All filter parameters: `source`, `view`, `limit`, `days`, `start`, `end`, `past`, `search`, `location`,
-`exclude`, `sort`, `template`, `show_images`, `show_attachments`, `month`, `page`, `per_page`, `navigation`
+`exclude`, `sort`, `template`, `show_images`, `show_attachments`, `month`, `page`, `per_page`, `navigation`, `mode_switcher`, `show_search`
 (`category` is rejected as not supported, D-12). Full schema: [rest-api.md](rest-api.md).
 
 - Filters can only narrow a view, never extend it.
 - Navigation: month view "Previous month"/"Next month", list and cards "Earlier events"/"More events" (earlier =
   events that already ended before the display range). Can be disabled per view and overridden with `navigation`.
-- Views with non-public sources are loaded via JavaScript and never written into (possibly publicly cached) page
+- By default, views with non-public sources are loaded via JavaScript and never written into (possibly publicly cached) page
   HTML (D-04).
 
 ## `wp-config.php` details
@@ -63,3 +68,11 @@ All filter parameters: `source`, `view`, `limit`, `days`, `start`, `end`, `past`
 - WP-CLI: `wp sw-cloudcalendar sources list | connections test --id=1 | sync --source=3 | sync --all --full |
   sync --due | attachments sync --source=3 | attachments prune --dry-run | cache clear | diagnostics |
   queue run [--seconds=50]`.
+
+## Preload the initial view (issue #31)
+
+In the View editor, under **Time & format**, enable **Preload initial view with the page**. The shortcode and block then include the calendar HTML in the first page response, including local adapter calendars; no initial AJAX request is needed. Subsequent navigation, search and details retain their existing behavior. Existing views are unchanged until this is enabled.
+
+Set **Preload cache duration** in minutes: default/minimum **60**, maximum **10080** (seven days). Keep **Use HTML cache** enabled both for the view and globally. On the first request for a view/filter/page/visitor combination the plugin renders the HTML and stores it; subsequent requests reuse it until expiry. There is no background warming job. Failed or incomplete adapter queries are not cached, including failed navigation probes; the next request retries them. Successful empty calendars are cached normally. Cache eviction can cause an earlier rebuild. Local event changes and date boundaries may remain stale for the entire configured duration. Saving the view, template/source revisions or **Diagnostics → Clear cache** invalidates the corresponding output earlier. Disabling HTML caching still renders inline but rebuilds on each request.
+
+**Private and local sources:** preloading is allowed and the editor displays a warning. A local adapter can impose visitor-specific permissions even when CloudCalendar marks the source public. You are responsible for excluding the embedding page from shared WordPress/reverse-proxy/CDN caches or configuring them per user. Authorized private events are present in the page source. The plugin separates private and local-source caches by user (anonymous visitors have a separate scope), checks source and adapter permissions before each cache hit, and keeps private/local REST responses `no-store`. A full-page cache that bypasses WordPress also bypasses these access checks.

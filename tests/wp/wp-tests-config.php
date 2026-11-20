@@ -5,6 +5,10 @@
  */
 
 define( 'ABSPATH', __DIR__ . '/vendor/johnpbloch/wordpress-core/' );
+if ( getenv( 'WP_TESTS_MULTISITE' ) === '1' ) {
+	define( 'WP_TESTS_MULTISITE', true );
+}
+
 define( 'WP_DEFAULT_THEME', 'default' );
 define( 'WP_DEBUG', true );
 

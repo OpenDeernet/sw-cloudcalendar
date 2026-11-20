@@ -26,27 +26,32 @@ final class ViewManager {
 	 */
 	public function to_array( CalendarView $view ): array {
 		return array(
-			'id'                    => $view->id,
-			'name'                  => $view->name,
-			'enabled'               => $view->enabled,
-			'revision'              => $view->revision,
-			'source_ids'            => $view->sourceIds,
-			'default_filters'       => (object) $view->defaultFilters,
-			'display_mode'          => $view->displayMode->value,
-			'allowed_modes'         => array_map( static fn ( DisplayMode $mode ): string => $mode->value, $view->allowedModes ),
-			'container_template_id' => $view->containerTemplateId,
-			'event_template_id'     => $view->eventTemplateId,
-			'detail_template_id'    => $view->detailTemplateId,
-			'allowed_template_ids'  => $view->allowedTemplateIds,
-			'timezone'              => $view->timezone,
-			'language'              => $view->language,
-			'color_rules'           => (object) $view->colorRules,
-			'html_cache'            => $view->htmlCache,
-			'date_format'           => $view->dateFormat,
-			'time_format'           => $view->timeFormat,
-			'show_navigation'       => $view->showNavigation,
-			'shortcode'             => '[sw_calendar id="' . $view->id . '"]',
-			'dynamic'               => $this->services->renderer()->requiresDynamicLoading( $view->id ),
+			'id'                             => $view->id,
+			'name'                           => $view->name,
+			'enabled'                        => $view->enabled,
+			'revision'                       => $view->revision,
+			'source_ids'                     => $view->sourceIds,
+			'default_filters'                => (object) $view->defaultFilters,
+			'display_mode'                   => $view->displayMode->value,
+			'allowed_modes'                  => array_map( static fn ( DisplayMode $mode ): string => $mode->value, $view->allowedModes ),
+			'container_template_id'          => $view->containerTemplateId,
+			'event_template_id'              => $view->eventTemplateId,
+			'detail_template_id'             => $view->detailTemplateId,
+			'allowed_template_ids'           => $view->allowedTemplateIds,
+			'container_template_ids_by_mode' => (object) $view->containerTemplateIdsByMode,
+			'event_template_ids_by_mode'     => (object) $view->eventTemplateIdsByMode,
+			'primary_color'                  => $view->primaryColor,
+			'timezone'                       => $view->timezone,
+			'language'                       => $view->language,
+			'color_rules'                    => (object) $view->colorRules,
+			'html_cache'                     => $view->htmlCache,
+			'preload'                        => $view->preload,
+			'preload_cache_minutes'          => $view->preloadCacheMinutes,
+			'date_format'                    => $view->dateFormat,
+			'time_format'                    => $view->timeFormat,
+			'show_navigation'                => $view->showNavigation,
+			'shortcode'                      => '[sw_calendar id="' . $view->id . '"]',
+			'dynamic'                        => $this->services->renderer()->requiresDynamicLoading( $view->id ),
 		);
 	}
 
@@ -147,6 +152,34 @@ final class ViewManager {
 			}
 			$allowed_templates[] = $template->id;
 		}
+		// Mode specific templates: an empty value keeps the view-wide template (or the preset of that mode).
+		$by_kind           = array(
+			'container_template_ids_by_mode' => TemplateKind::Container,
+			'event_template_ids_by_mode'     => TemplateKind::Event,
+		);
+		$templates_by_mode = array(
+			'container_template_ids_by_mode' => array(),
+			'event_template_ids_by_mode'     => array(),
+		);
+		foreach ( $by_kind as $field => $kind ) {
+			$value = $data[ $field ] ?? array();
+			foreach ( (array) ( is_array( $value ) ? $value : (array) $value ) as $mode_key => $template_id ) {
+				$mode_name = DisplayMode::tryFrom( (string) $mode_key );
+				if ( null === $mode_name ) {
+					$errors[ $field ] = 'invalid_mode';
+					continue;
+				}
+				if ( null === $template_id || '' === $template_id || 0 === (int) $template_id ) {
+					continue;
+				}
+				$template = $this->services->templates()->find( (int) $template_id );
+				if ( null === $template || $template->kind !== $kind ) {
+					$errors[ $field . '.' . $mode_name->value ] = 'invalid_template';
+					continue;
+				}
+				$templates_by_mode[ $field ][ $mode_name->value ] = $template->id;
+			}
+		}
 		$language = (string) ( $data['language'] ?? '' );
 		if ( '' !== $language && 1 !== preg_match( '/^[a-z]{2,3}(_[A-Z]{2})?(_[a-z0-9]+)?$/', $language ) ) {
 			$errors['language'] = 'invalid';
@@ -171,6 +204,10 @@ final class ViewManager {
 			}
 			$colors[ (int) $source_id ] = strtolower( (string) $color );
 		}
+		$primary_color = (string) ( $data['primary_color'] ?? '' );
+		if ( '' !== $primary_color && 1 !== preg_match( '/^#[0-9a-fA-F]{6}$/', $primary_color ) ) {
+			$errors['primary_color'] = 'invalid';
+		}
 		$formats = array();
 		foreach ( array( 'date_format', 'time_format' ) as $field ) {
 			$value = (string) ( $data[ $field ] ?? '' );
@@ -179,25 +216,37 @@ final class ViewManager {
 			}
 			$formats[ $field ] = $value;
 		}
+		if ( array_key_exists( 'preload', $data ) && ! is_bool( $data['preload'] ) ) {
+			$errors['preload'] = 'invalid';
+		}
+		$preload_minutes = array_key_exists( 'preload_cache_minutes', $data ) ? $data['preload_cache_minutes'] : 60;
+		if ( ! is_int( $preload_minutes ) || $preload_minutes < 60 || $preload_minutes > 10080 ) {
+			$errors['preload_cache_minutes'] = 'invalid';
+		}
 		if ( array() !== $errors ) {
 			throw new ValidationException( $errors );
 		}
 		$config = array(
-			'source_ids'            => $source_ids,
-			'default_filters'       => array_intersect_key( $defaults, $parsed->filter->toArray() + array( 'source' => 1 ) ),
-			'display_mode'          => $mode->value,
-			'allowed_modes'         => array_values( array_unique( $allowed_modes ) ),
-			'container_template_id' => $template_ids['container_template_id'],
-			'event_template_id'     => $template_ids['event_template_id'],
-			'detail_template_id'    => $template_ids['detail_template_id'],
-			'allowed_template_ids'  => array_values( array_unique( $allowed_templates ) ),
-			'timezone'              => $timezone,
-			'language'              => $language,
-			'color_rules'           => $colors,
-			'html_cache'            => (bool) ( $data['html_cache'] ?? true ),
-			'date_format'           => $formats['date_format'],
-			'time_format'           => $formats['time_format'],
-			'show_navigation'       => (bool) ( $data['show_navigation'] ?? true ),
+			'source_ids'                     => $source_ids,
+			'default_filters'                => array_intersect_key( $defaults, $parsed->filter->toArray() + array( 'source' => 1 ) ),
+			'display_mode'                   => $mode->value,
+			'allowed_modes'                  => array_values( array_unique( $allowed_modes ) ),
+			'container_template_id'          => $template_ids['container_template_id'],
+			'event_template_id'              => $template_ids['event_template_id'],
+			'detail_template_id'             => $template_ids['detail_template_id'],
+			'allowed_template_ids'           => array_values( array_unique( $allowed_templates ) ),
+			'container_template_ids_by_mode' => $templates_by_mode['container_template_ids_by_mode'],
+			'event_template_ids_by_mode'     => $templates_by_mode['event_template_ids_by_mode'],
+			'primary_color'                  => strtolower( $primary_color ),
+			'timezone'                       => $timezone,
+			'language'                       => $language,
+			'color_rules'                    => $colors,
+			'html_cache'                     => (bool) ( $data['html_cache'] ?? true ),
+			'preload'                        => (bool) ( $data['preload'] ?? false ),
+			'preload_cache_minutes'          => $preload_minutes,
+			'date_format'                    => $formats['date_format'],
+			'time_format'                    => $formats['time_format'],
+			'show_navigation'                => (bool) ( $data['show_navigation'] ?? true ),
 		);
 		return array( $name, (bool) ( $data['enabled'] ?? true ), $config );
 	}

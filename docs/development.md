@@ -42,7 +42,7 @@ Zeilenlängen-Warnungen über 200 Zeichen schlagen nicht fehl (wie sw-backupit).
 - `.github/dependabot.yml` öffnet wöchentlich gruppierte PRs (Security-Fixes, gekoppelte Pakete, Dev-Tools, Runtime minor/patch).
   Dependabot-PRs erhalten keine Secrets, daher überspringt der SonarQube-Job sie.
 - In den Repository-Einstellungen müssen Dependabot alerts und security updates aktiviert sein.
-- Node >= 22 (vue-i18n 11; `apps/admin/.nvmrc`). PHPStan: `phpstan-wordpress` und Stubs in `tests/phpstan/` (Konstanten, WP-CLI,
+- Node 22 ab 22.22.2 (Vite 8 / Vitest 5 / ESLint 10; `apps/admin/.nvmrc`). PHPStan: `phpstan-wordpress` und Stubs in `tests/phpstan/` (Konstanten, WP-CLI,
   korrigierte Core-PHPDocs); kein `ignoreErrors`, keine Baseline, kein `@phpstan-ignore`.
 
 ## Build
@@ -68,3 +68,5 @@ Quellcode-Checkouts nutzen `vendor/autoload.php`; Releases nur `vendor-prefixed/
 - `wpdb::prepare()` macht aus `NULL` einen Leerstring: optionale Spalten werden separat oder über `wpdb::update()` gesetzt.
 - sabre/vobject `EventIterator` ignoriert RRULE bei vorhandenem RDATE (deshalb eigener `RecurrenceExpander`).
 - Mozart schreibt nur die Pakete um, nicht `src/` (deshalb `bin/prefix-sources.php`).
+
+Bei System-Cron muss `wp sw-cloudcalendar queue run` regelmäßig ausgeführt werden. Der Quellen-Button **Synchronisation manuell durchführen** führt gezielt einen Sync ohne Cron aus; bestehende Job- und Quellensperren bleiben wirksam.

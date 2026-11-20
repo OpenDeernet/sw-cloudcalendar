@@ -4,11 +4,15 @@
 |---|---|---|
 | Unit | `tests/Unit` | Template-Compiler (XSS in Text/Attribut/URL/Style, Sections, Syntaxfehler, AST-Cache/Korruption), CSS-Scoping, Filterschema, Zeiträume, ACL-Matrix und Null-Schnittmengen, Recurrence (DST Europe/Berlin, ganztägig, mehrtägig, verschobene/abgesagte Instanz, EXDATE, RDATE+RRULE, exklusive Enden, Grenzen), ICS-Parser (Windows-TZID, Floating, DURATION, ATTACH, Encoding), SyncService (Seite 3/5 fehlerhaft, Delta, 410-Rebuild, Rollback, Lock, Retry-After, Reauth), Attachment-Policy, Secret-Vault, Dateispeicher (Traversal, Symlink, MIME-Spoofing), SSRF-Guard, Redaction |
 | Integration | `tests/Integration` | Provider-Fixtures: Google (Pagination ohne `timeMin/timeMax`, Sync-Token, 410, 401-Refresh), Microsoft (`nextLink`/`deltaLink` opak, Fensterbindung, 429 + Retry-After, fremde Links), OAuth (PKCE, `invalid_grant`) |
-| WordPress | `tests/wp/tests` | Schema/Migration, verschlüsselte Secrets, ICS-Sync → Shortcode, 304, Provider-Ausfall, gelöschte Termine, geschützte Views nie im Seiten-HTML, AST- und HTML-Cache-Hits, ACL über REST (Gäste/Rollen, `source` erweitert nichts, Detail-404, Sperre vor Cache-Hit, deaktivierte Quelle), Admin-Rechte, Freigabebestätigungen, Template-Validierung/409/Änderung wirkt sofort, Preview ohne Providerzugriff, OAuth-State (einmalig, benutzergebunden), Anhänge (Speicherung, MIME-Spoofing, `public_only`, ACL vor Download, Widerruf bei Entfernung und ACL-Wechsel, unsicherer Speicher) |
+| WordPress | `tests/wp/tests` | Schema/Migration, verschlüsselte Secrets, ICS-Sync → Shortcode, 304, Provider-Ausfall, gelöschte Termine, geschützte Views nie im Seiten-HTML, AST- und HTML-Cache-Hits, ACL über REST (Gäste/Rollen, `source` erweitert nichts, Detail-404, Sperre vor Cache-Hit, deaktivierte Quelle), Admin-Rechte, Freigabebestätigungen, Template-Validierung/409/Änderung wirkt sofort, Templates je Darstellung (Karten abweichend, Liste/Monat unverändert, Freigabe per `template`, HTML-Cache je Darstellung, Löschung gesperrt), Preview ohne Providerzugriff, OAuth-State (einmalig, benutzergebunden), Anhänge (Speicherung, MIME-Spoofing, `public_only`, ACL vor Download, Widerruf bei Entfernung und ACL-Wechsel, unsicherer Speicher) |
 
 | Browser-E2E | `tests/E2E` | Wegwerf-WordPress (private MariaDB, PHP-Builtin-Server), Daten über den echten Sync-Service mit Fixture-Feed; Playwright/Chromium: Liste, Detail-Dialog, Monatsraster und REST-Navigation, Mobil-Agenda, geschützte View (kein Markup im Seitenquelltext für Gäste, nachgeladen nur mit Rolle), Editor ohne Admin-Zugriff (403), alle Admin-SPA-Seiten ohne Konsolenfehler, View- und Template-Editor mit Sandbox-Vorschau; Screenshots in `<workdir>/shots` |
 
-Aufruf: `CHROME=<chromium> PW_DIR=<node_modules mit playwright-core> tests/E2E/run.sh [workdir]` (nach `bin/test-db.sh start`).
+Aufruf: `npm ci --prefix tests/E2E`, dann in `tests/E2E` `npx playwright-core install --with-deps chromium`.
+Nach `bin/test-db.sh start` und dem Admin-Build: `tests/E2E/run.sh [workdir]`.
+`CHROME` und `PW_DIR` können Browser bzw. Node-Abhängigkeiten überschreiben; die Datenbank nutzt dieselben
+`SWC_TEST_DB_*`-Variablen wie die WordPress-Suite. CI führt die Browser-Suite im PHP-Job aus und archiviert
+Screenshots, Ergebnis und Server-/WordPress-Logs für 14 Tage.
 
 ## E2E-Szenarien (SPEC §18.3)
 
@@ -28,9 +32,10 @@ Aufruf: `CHROME=<chromium> PW_DIR=<node_modules mit playwright-core> tests/E2E/r
 | E2E-13 | `SyncAndRenderTest::test_deleted_event_disappears_after_successful_sync`, `AttachmentTest` (Revoke) |
 | E2E-14 | `SyncAndRenderTest::test_protected_view_is_never_serialized_into_page_html` |
 | E2E-15 | `SyncServiceTest::testLockPreventsParallelRunAndExpiredLockIsTakenOver`, Job-Idempotenz |
+| E2E-16 | Templates je Darstellung im Browser: Karten mit eigenem Termin-Template, Liste und Monatsraster derselben Ansicht unverändert; Ansicht-Editor zeigt die Vorwahl je Darstellung |
 
 **Nicht automatisiert:** Formular-Workflows der Admin-SPA im Browser (Anlegen/Speichern; abgedeckt durch Vitest und
-die REST-Tests), Tests gegen echte Google-/Microsoft-Konten, Last-/Performance-Messungen (SPEC §17) und Tests mit
+die REST-Tests), Tests gegen echte Google-/Microsoft-Konten, parallele Lasttests und Tests mit
 realen Page-Cache-Plugins.
 
 ## Coverage
@@ -39,9 +44,40 @@ Zeilenabdeckung je Sprache muss **> 80 %** sein (ganzzahliger Vergleich, genau 8
 
 - **JS/TS:** `npm run test:coverage` in `apps/admin` (Vitest V8). Umfang: `apps/admin/src` (ohne reine Typdateien `src/types`,
   `*.d.ts`), `apps/admin/tools`, die ungebündelten Skripte `assets/js/**` und `blocks/**/*.js` (Tests:
-  `frontend-script.test.ts`, `block-editor.test.ts`). `scripts/check-coverage.mjs` prüft > 80 %, schlägt fehl, wenn ein
-  Skript aus `assets/js`/`blocks` im Bericht fehlt, und schreibt die LCOV-Pfade relativ zur Plugin-Wurzel (SonarQube).
+  `frontend-script.test.ts`, `block-editor.test.ts`). `scripts/check-coverage.mjs` prüft > 80 %, schlägt fehl, wenn eine
+  Produktivdatei aus Admin-App, Build-Plugin oder `assets/js`/`blocks` im Bericht fehlt, und schreibt die LCOV-Pfade
+  relativ zur Plugin-Wurzel (SonarQube).
 - **PHP:** Unit/Integration und WordPress-Suite liefern Clover, `tests/coverage/merge.php` vereinigt sie,
   `tests/coverage/check.php` prüft > 80 % und dass jede PHP-Datei aus `src`, `templates`, `blocks`, `sw-cloudcalendar.php`,
   `uninstall.php` im Bericht steht. Code, der nur beim Bootstrap vor Start der Messung läuft (Hauptdatei), zählt als
   nicht abgedeckt.
+
+Vitest 5 zählt ausführbare Zeilen; frühere Prozentwerte aus Vitest 3 sind nicht direkt vergleichbar.
+
+
+## Performance (2.000 Ereignisse/Monat)
+
+`composer test:performance` nutzt die lokale WordPress-Testumgebung und deren Wegwerf-Datenbank
+(Voraussetzungen wie `composer test:wp`, siehe [Development](../README.md#development)).
+Nicht parallel zur WordPress-Suite ausführen: Beide installieren ihre Testtabellen neu.
+Details, Grenzen und Referenzmessung: [tests/Performance/README.md](../tests/Performance/README.md).
+
+## Verifizierte GitHub-Updates
+
+Update-spezifische Prüfungen, isolierte native Upgrader und Docker-Browserprüfungen: [Verifikationsbericht](GITHUB-UPDATES-VERIFIKATION.md). Betriebsregeln und Schlüsselbefehle: [Betriebshandbuch](GITHUB-UPDATES-BETRIEB.md). CI-Suiten laufen ausschließlich auf Pull Requests; DB-Suiten mit gemeinsamem Zustand sequenziell.
+
+## Initial view preloading (#31)
+
+`PreloadViewTest` covers opt-in/legacy defaults, REST round trips and partial updates, invalid/minimum/maximum durations, inline HTML, long transient TTL and expiry, source/adapter access checks, private visitor separation, non-public cache results, invalidation, filters and disabled caches/views. Admin tests cover saving duration and warnings for private sources and public local sources (both local flag and provider detection); synchronized public sources show no warning. Docker E2E loads a real local adapter twice, checks initial page HTML without startup AJAX and verifies the adapter was queried only for the first render. Guest and authorized private-page responses are checked separately.
+
+Manual check: edit a View, enable **Preload initial view with the page**, set **120 minutes**, leave view/global HTML caches enabled and save. Load the embedding page and inspect its source: event markup should already be present and no initial `/render` request should occur. Reload: the same HTML should be reused. Clear the plugin cache to rebuild. With a private or local source selected the warning must appear; configure the embedding page’s page/CDN cache per user or exclude it before using this option.
+
+Local verification (16 November 2026): 196 unit/integration tests, 286 WordPress tests (1,604 assertions), 193 JS/TS tests and 38 Docker browser checks passed. Line coverage: PHP 89.75%, JS/TS 83.57%. PHPStan 8, WPCS, ESLint, TypeScript, admin build and translation checks passed; existing PSR-12 warnings remain unchanged. The browser preload scenario uses its own session, and the login helper waits for the actual backend redirect before authenticated navigation to avoid cancelling form submission. The initial PR #44 CI and SonarQube runs also passed; automated review identified the missing warning for public local sources, addressed with dedicated UI regression cases. No publication was performed.
+
+Review follow-up for PR #44: the editor now warns for every selected local source, even when its CloudCalendar visibility is public, because adapter permissions can be visitor-specific. Regression cases cover both the `local` flag and `provider: local`, plus synchronized-public views without a warning. All 195 JS/TS tests, ESLint, TypeScript and the admin build passed; JS/TS line coverage is 83.58%.
+
+The review follow-up Docker run passed all 38 checks after synchronizing login with the backend redirect; server logs confirmed login POSTs before protected navigation.
+
+A second automated-review finding is addressed by propagating optional `complete: false` query metadata through pagination (including navigation probes) and skipping HTML cache writes for partial adapter failures. Regression tests cover local-only and mixed-source failures/recovery, forward/backward pages, navigation-only failures, legitimately empty calendars, disconnected sources and incomplete upstream results. The HTML cache key version invalidates older entries that may contain partial results.
+
+After the second review correction: 198 unit/integration tests (550 assertions), 292 WordPress tests (1,635 assertions) and all 38 Docker browser checks passed. PHP line coverage is 89.78%; PHPStan 8 and both PHP linters passed (existing PSR-12 warnings unchanged). Frontend results remain 195 passing tests and 83.58% line coverage.

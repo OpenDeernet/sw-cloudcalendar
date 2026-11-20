@@ -10,6 +10,17 @@ STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 NAME=sw-cloudcalendar
 
+# Reject ambiguous identity/version before building or uploading anything.
+VERSION="$(php -r '
+$main = file_get_contents($argv[1]);
+if (!preg_match("/^[ \t*]*Version:\s*([0-9]+(?:\.[0-9]+){2,3})\s*$/m", $main, $header)
+    || !preg_match("/define\\( ".chr(39)."SW_CALENDAR_VERSION".chr(39).", ".chr(39)."([0-9.]+)".chr(39)." \\);/", $main, $constant)
+    || $header[1] !== $constant[1]) {
+    fwrite(STDERR, "Plugin header and version constant must match.\n"); exit(1);
+}
+echo $header[1];
+' "$ROOT/sw-cloudcalendar.php")"
+
 if [ "${SWC_SKIP_ADMIN_BUILD:-0}" = "1" ] && [ -f "$ROOT/assets/admin/app.js" ] \
   && [ -z "$(find "$ROOT/apps/admin/src" "$ROOT/apps/admin/package-lock.json" -newer "$ROOT/assets/admin/app.js" -print -quit)" ]; then
   echo ">> reusing admin bundle (SWC_SKIP_ADMIN_BUILD=1, assets are up to date)"
@@ -74,7 +85,7 @@ rm -f "$STAGE/$NAME/composer.json" "$STAGE/$NAME/composer.lock"
 php "$ROOT/tests/bootstrap.php" "$STAGE/$NAME"
 
 mkdir -p "$OUT"
-VERSION="$(grep -m1 "Version:" "$ROOT/sw-cloudcalendar.php" | awk '{print $NF}')"
+OUT="$(cd "$OUT" && pwd)"
 rm -f "$OUT/$NAME-$VERSION.zip"
 (cd "$STAGE" && zip -qr "$OUT/$NAME-$VERSION.zip" "$NAME")
 echo ">> $OUT/$NAME-$VERSION.zip"

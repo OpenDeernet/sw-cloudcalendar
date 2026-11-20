@@ -12,11 +12,12 @@ interface OccurrenceQueryInterface
     /**
      * Overlap query (SPECIFICATIONS.md §4.2) over the given, already AUTHORIZED source ids; visible statuses only;
      * deterministic order by start, source id, id. `$endedBeforeRangeEnd` additionally requires the occurrence to
-     * have ended at the range end (backward paging).
+     * have ended at the range end (backward paging). An optional `complete: false` marks partial results after
+     * a source failure; callers must not cache those results. Omission preserves the existing successful contract.
      *
      * @param list<int> $sourceIds
-     * @param list<int> $excludeIds
-     * @return array{items: list<Occurrence>, total: int}
+     * @param list<int|string> $excludeIds
+     * @return array{items: list<Occurrence>, total: int, complete?: bool}
      */
     public function find(
         array $sourceIds,
@@ -31,5 +32,5 @@ interface OccurrenceQueryInterface
         bool $endedBeforeRangeEnd = false,
     ): array;
 
-    public function findById(int $id): ?Occurrence;
+    public function findById(int|string $id): ?Occurrence;
 }

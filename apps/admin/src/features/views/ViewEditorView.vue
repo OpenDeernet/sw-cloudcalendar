@@ -20,13 +20,17 @@ import { useLookupsStore } from '@/stores/lookups';
 import type { CalendarView, DisplayMode, RenderResult, TemplateKind, ViewInput } from '@/types/api';
 import {
   DISPLAY_MODES,
+  blankModeTemplateForm,
   blankView,
   cleanColorRules,
   fromFilterForm,
+  fromModeTemplateForm,
   toFilterForm,
+  toModeTemplateForm,
   toViewInput,
 } from './viewForm';
-import type { FilterForm, TriState } from './viewForm';
+import ViewDisplayHelp from './ViewDisplayHelp.vue';
+import type { FilterForm, ModeTemplateForm, TriState } from './viewForm';
 
 const props = defineProps<{ id?: string }>();
 const { t } = useI18n();
@@ -41,6 +45,7 @@ const isEdit = computed(() => viewId.value !== null);
 const stored = ref<CalendarView | null>(null);
 const form = ref<ViewInput>(blankView());
 const filters = ref<FilterForm>(toFilterForm({}));
+const modeTemplates = ref<ModeTemplateForm>(blankModeTemplateForm());
 const dirty = ref(false);
 
 const loader = useAsyncData(
@@ -65,13 +70,14 @@ async function load(): Promise<void> {
   stored.value = result.view;
   form.value = result.view ? toViewInput(result.view) : blankView();
   filters.value = toFilterForm(form.value.default_filters);
+  modeTemplates.value = result.view ? toModeTemplateForm(result.view) : blankModeTemplateForm();
   await nextTick();
   dirty.value = false;
   if (result.view) void renderPreview();
 }
 onMounted(load);
 watch(viewId, load);
-watch([form, filters], () => (dirty.value = true), { deep: true });
+watch([form, filters, modeTemplates], () => (dirty.value = true), { deep: true });
 
 /* ---------- options ---------- */
 const sourceOptions = computed(() =>
@@ -93,6 +99,27 @@ function templateOptions(kind: TemplateKind) {
       .map((tpl) => ({ value: tpl.id as number | null, label: tpl.name })),
   ];
 }
+/** Choices of a mode override: „standard“ inherits the template of the whole view (or its preset). */
+function modeTemplateOptions(kind: TemplateKind) {
+  return [
+    { value: null as number | null, label: t('views.modeTemplateInherit') },
+    ...templates.value
+      .filter((tpl) => tpl.kind === kind)
+      .map((tpl) => ({ value: tpl.id as number | null, label: tpl.name })),
+  ];
+}
+/** Only displays a visitor may actually see: the standard one plus the released ones. */
+const templateModes = computed(() =>
+  DISPLAY_MODES.filter(
+    (m) => m === form.value.display_mode || form.value.allowed_modes.includes(m),
+  ),
+);
+function modeTemplateLabel(kind: TemplateKind, mode: DisplayMode): string {
+  return t('views.modeTemplateLabel', {
+    kind: t(`views.${kind}Template`),
+    mode: t(`views.modes.${mode}`),
+  });
+}
 const eventTemplateChoices = computed(() =>
   templates.value
     .filter((tpl) => tpl.kind === 'event')
@@ -109,7 +136,11 @@ const sortOptions = computed(() => [
 const selectedSources = computed(() =>
   sources.value.filter((s) => form.value.source_ids.includes(s.id)),
 );
-const hasNonPublic = computed(() => selectedSources.value.some((s) => s.visibility !== 'public'));
+const hasRestrictedSources = computed(() =>
+  selectedSources.value.some(
+    (s) => s.visibility !== 'public' || s.local === true || s.provider === 'local',
+  ),
+);
 
 function toggleMode(mode: DisplayMode, on: boolean): void {
   const set = new Set(form.value.allowed_modes);
@@ -141,6 +172,7 @@ function buildBody(): ViewInput {
   return {
     ...form.value,
     name: form.value.name.trim(),
+    ...fromModeTemplateForm(modeTemplates.value),
     allowed_modes: form.value.allowed_modes.includes(form.value.display_mode)
       ? form.value.allowed_modes
       : [...form.value.allowed_modes, form.value.display_mode],
@@ -166,6 +198,7 @@ async function save(): Promise<void> {
     stored.value = saved;
     form.value = toViewInput(saved);
     filters.value = toFilterForm(saved.default_filters);
+    modeTemplates.value = toModeTemplateForm(saved);
     await nextTick();
     dirty.value = false;
     void renderPreview();
@@ -335,7 +368,9 @@ watch(previewMode, () => void renderPreview());
                 </q-item>
               </template>
             </q-select>
-            <p v-if="hasNonPublic" class="swc-callout is-info">{{ t('views.dynamicHint') }}</p>
+            <p v-if="hasRestrictedSources && !form.preload" class="swc-callout is-info">
+              {{ t('views.dynamicHint') }}
+            </p>
             <div v-if="selectedSources.length > 0">
               <p class="swc-eyebrow">{{ t('views.colorOverrides') }}</p>
               <ul class="swc-ve__colors">
@@ -367,13 +402,21 @@ watch(previewMode, () => void renderPreview());
           </SwcCard>
 
           <SwcCard :title="t('views.sectionDisplay')" icon="r_view_quilt">
+            <template #actions><ViewDisplayHelp :view-id="viewId" /></template>
+            <div class="swc-row">
+              <span>{{ t('views.defaultDisplayMode') }}</span>
+              <ViewDisplayHelp topic="mode" :view-id="viewId" />
+            </div>
             <SegmentedControl
               v-model="form.display_mode"
               :options="modeOptions"
-              :legend="t('views.displayMode')"
+              :legend="t('views.defaultDisplayMode')"
             />
             <fieldset class="swc-ve__fs">
-              <legend>{{ t('views.allowedModes') }}</legend>
+              <legend>
+                {{ t('views.allowedModes') }}
+                <ViewDisplayHelp topic="allowedModes" :view-id="viewId" />
+              </legend>
               <q-checkbox
                 v-for="m in DISPLAY_MODES"
                 :key="m"
@@ -384,6 +427,29 @@ watch(previewMode, () => void renderPreview());
               />
               <p class="swc-hint">{{ t('views.allowedModesHint') }}</p>
             </fieldset>
+            <div class="swc-form-grid">
+              <q-select
+                v-model="filters.mode_switcher"
+                outlined
+                dense
+                emit-value
+                map-options
+                :options="triOptions"
+                :label="t('views.modeSwitcher')"
+                :hint="t('views.modeSwitcherHint')"
+              />
+              <q-select
+                v-model="filters.show_search"
+                outlined
+                dense
+                emit-value
+                map-options
+                :options="triOptions"
+                :label="t('views.showSearch')"
+                :hint="t('views.showSearchHint')"
+              />
+            </div>
+            <p class="swc-hint">{{ t('views.templatesGeneralHint') }}</p>
             <div class="swc-form-grid">
               <q-select
                 v-model="form.container_template_id"
@@ -419,6 +485,40 @@ watch(previewMode, () => void renderPreview());
                 :error-message="fields.field('detail_template_id')"
               />
             </div>
+            <fieldset class="swc-ve__fs" data-swc-mode-templates>
+              <legend>
+                {{ t('views.modeTemplates') }}
+                <ViewDisplayHelp topic="modeTemplates" :view-id="viewId" />
+              </legend>
+              <p class="swc-hint">{{ t('views.modeTemplatesHint') }}</p>
+              <div v-for="m in templateModes" :key="m" class="swc-ve__mode" :data-swc-mode="m">
+                <span class="swc-ve__mode-name">{{ t(`views.modes.${m}`) }}</span>
+                <div class="swc-form-grid">
+                  <q-select
+                    v-model="modeTemplates.container[m]"
+                    outlined
+                    dense
+                    emit-value
+                    map-options
+                    :options="modeTemplateOptions('container')"
+                    :label="modeTemplateLabel('container', m)"
+                    :error="!!fields.field(`container_template_ids_by_mode.${m}`)"
+                    :error-message="fields.field(`container_template_ids_by_mode.${m}`)"
+                  />
+                  <q-select
+                    v-model="modeTemplates.event[m]"
+                    outlined
+                    dense
+                    emit-value
+                    map-options
+                    :options="modeTemplateOptions('event')"
+                    :label="modeTemplateLabel('event', m)"
+                    :error="!!fields.field(`event_template_ids_by_mode.${m}`)"
+                    :error-message="fields.field(`event_template_ids_by_mode.${m}`)"
+                  />
+                </div>
+              </div>
+            </fieldset>
             <q-select
               v-model="form.allowed_template_ids"
               outlined
@@ -432,7 +532,9 @@ watch(previewMode, () => void renderPreview());
               :hint="t('views.allowedTemplatesHint')"
               :error="!!fields.field('allowed_template_ids')"
               :error-message="fields.field('allowed_template_ids')"
-            />
+            >
+              <template #after><ViewDisplayHelp topic="templates" :view-id="viewId" /></template>
+            </q-select>
           </SwcCard>
 
           <SwcCard :title="t('views.sectionFormat')" icon="r_schedule">
@@ -478,8 +580,107 @@ watch(previewMode, () => void renderPreview());
                 :error-message="fields.field('time_format')"
               />
             </div>
+            <q-select
+              v-model="filters.color_titles"
+              outlined
+              dense
+              :label="t('views.colorTitles')"
+              emit-value
+              map-options
+              :options="[
+                { value: 'default', label: t('common.default') },
+                { value: 'yes', label: t('common.yes') },
+                { value: 'no', label: t('common.no') },
+              ]"
+            />
+            <q-select
+              v-model="filters.legend"
+              outlined
+              dense
+              :label="t('views.legend')"
+              emit-value
+              map-options
+              :options="[
+                { value: 'default', label: t('common.default') },
+                { value: 'yes', label: t('common.yes') },
+                { value: 'no', label: t('common.no') },
+              ]"
+            />
+            <q-input
+              v-model="filters.columns"
+              type="number"
+              min="1"
+              max="4"
+              outlined
+              dense
+              :label="t('views.columns')"
+            />
+            <q-input
+              v-model="filters.day_limit"
+              type="number"
+              min="1"
+              max="20"
+              outlined
+              dense
+              :label="t('views.dayLimit')"
+            />
+            <q-input
+              v-model="filters.month"
+              outlined
+              dense
+              placeholder="2026-11"
+              :label="t('views.month')"
+            />
+            <q-input
+              v-model="filters.navigation_group"
+              outlined
+              dense
+              maxlength="64"
+              :label="t('views.navigationGroup')"
+              :hint="t('views.navigationGroupHint')"
+            />
+            <div class="swc-row">
+              <span>{{ t('views.primaryColor') }}</span>
+              <input
+                type="color"
+                class="swc-ve__picker"
+                :value="form.primary_color || '#2271b1'"
+                :aria-label="t('views.primaryColor')"
+                @input="form.primary_color = ($event.target as HTMLInputElement).value"
+              />
+              <q-btn
+                v-if="form.primary_color"
+                flat
+                dense
+                no-caps
+                :label="t('views.primaryColorReset')"
+                @click="form.primary_color = ''"
+              />
+            </div>
+            <p class="swc-hint">{{ t('views.primaryColorHint') }}</p>
             <q-toggle v-model="form.show_navigation" :label="t('views.showNavigation')" />
             <p class="swc-hint">{{ t('views.showNavigationHint') }}</p>
+            <q-toggle v-model="form.preload" :label="t('views.preload')" />
+            <p class="swc-hint">{{ t('views.preloadHint') }}</p>
+            <p
+              v-if="form.preload && hasRestrictedSources"
+              role="alert"
+              class="swc-callout is-warning"
+            >
+              {{ t('views.preloadPrivateWarning') }}
+            </p>
+            <q-input
+              v-if="form.preload"
+              v-model.number="form.preload_cache_minutes"
+              type="number"
+              outlined
+              dense
+              min="60"
+              max="10080"
+              :label="t('views.preloadCacheMinutes')"
+              :error="!!fields.field('preload_cache_minutes')"
+              :error-message="fields.field('preload_cache_minutes')"
+            />
             <q-toggle v-model="form.html_cache" :label="t('views.htmlCache')" />
             <p class="swc-hint">{{ t('views.htmlCacheHint') }}</p>
           </SwcCard>
@@ -729,6 +930,22 @@ watch(previewMode, () => void renderPreview());
   font-size: 13px;
   font-weight: 600;
   padding: 0 4px;
+}
+.swc-ve__mode {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.2fr) minmax(0, 1fr);
+  gap: 4px 12px;
+  align-items: center;
+}
+.swc-ve__mode-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+@media (max-width: 720px) {
+  .swc-ve__mode {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
 }
 .swc-ve__footer {
   display: flex;

@@ -1,8 +1,5 @@
 name: Tests and SonarQube
 on:
-  push:
-    branches:
-    - '**'
   pull_request: null
 permissions:
   contents: read
@@ -16,7 +13,7 @@ jobs:
       SWC_TEST_DB_USER: root
       SWC_TEST_DB_PASSWORD: wordpress-test
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - uses: shivammathur/setup-php@v2
       with:
         php-version: '8.2'
@@ -37,10 +34,37 @@ jobs:
     - name: WordPress coverage
       working-directory: tests/wp
       run: vendor/bin/phpunit -c phpunit.xml.dist --coverage-clover ../../coverage/wordpress.xml
+    - name: Verified updates on multisite (sequential, shared database)
+      run: WP_TESTS_MULTISITE=1 composer test:wp -- --filter VerifiedUpdatesTest
+    - name: Refuse immutable CLI and REST contexts in separate processes
+      run: |
+        php tests/release/check-policy-context.php WP_CLI
+        php tests/release/check-policy-context.php REST_REQUEST
+        php -n -d disable_functions=sodium_crypto_sign_verify_detached tests/release/check-missing-extensions.php
+    - name: Test performance report formatter
+      run: node --test tests/Performance/comment.test.cjs
+    - name: Local performance benchmark (2000 events)
+      env:
+        SWC_PERF_REPORT: ${{ runner.temp }}/swc-performance.json
+      run: composer test:performance
+    - name: Performance job summary
+      uses: actions/github-script@v9
+      with:
+        script: |
+          await require('./.github/scripts/performance-comment.cjs').run(
+            { github, context, core }, `${process.env.RUNNER_TEMP}/swc-performance.json`
+          );
+    - name: Upload performance measurements
+      uses: actions/upload-artifact@v7
+      with:
+        name: calendar-performance
+        path: ${{ runner.temp }}/swc-performance.json
+        if-no-files-found: error
+        retention-days: 90
     - name: Merge and normalize Clover paths
       run: php tests/coverage/merge.php coverage/unit.xml coverage/wordpress.xml
     - name: Upload Clover coverage
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: php-coverage
         path: coverage/clover.xml
@@ -48,6 +72,44 @@ jobs:
         retention-days: 14
     - name: Strict PHP line coverage gate (> 80 %)
       run: php tests/coverage/check.php coverage/clover.xml
+    - uses: actions/setup-node@v7
+      with:
+        node-version-file: apps/admin/.nvmrc
+        cache: npm
+        cache-dependency-path: |
+          apps/admin/package-lock.json
+          tests/E2E/package-lock.json
+    - name: Build admin assets for browser tests
+      run: npm ci --prefix apps/admin && npm run build --prefix apps/admin
+    - name: Install browser and shell test dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y mariadb-client zsh
+        npm ci --prefix tests/E2E
+    - name: Deferred update UI browser checks and coverage
+      run: bash tests/E2E/with-browser.sh node apps/admin/scripts/test-updates-ui.mjs
+    - name: Build and verify signed artifacts with disposable keys
+      run: |
+        SWC_SKIP_ADMIN_BUILD=1 bash bin/build-zip.sh "$RUNNER_TEMP/release-check"
+        php tests/release/verify-signed-build.php "$RUNNER_TEMP/release-check"
+    - name: Release command with isolated local repositories
+      run: python3 tests/release/test-release-command.py
+    - name: Verify documented key setup in isolation
+      run: python3 tests/release/check-key-instructions.py
+    - name: Browser E2E
+      run: bash tests/E2E/with-browser.sh tests/E2E/run.sh "$RUNNER_TEMP/swc-e2e"
+    - name: Upload browser test results
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: browser-e2e
+        path: |
+          ${{ runner.temp }}/swc-e2e/result.txt
+          ${{ runner.temp }}/swc-e2e/server.log
+          ${{ runner.temp }}/swc-e2e/shots
+          ${{ runner.temp }}/swc-e2e/wp/debug.log
+        if-no-files-found: ignore
+        retention-days: 14
     services:
       mariadb:
         image: mariadb:11.4
@@ -58,27 +120,58 @@ jobs:
         ports:
         - 33078:3306
         options: --health-cmd="healthcheck.sh --connect --innodb_initialized" --health-interval=5s --health-timeout=5s --health-retries=20
+  performance-comment:
+    name: Performance PR comment
+    needs: php
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      actions: read
+    concurrency:
+      group: performance-comment-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        sparse-checkout: .github/scripts
+        persist-credentials: false
+    - uses: actions/download-artifact@v8
+      with:
+        name: calendar-performance
+        path: performance
+    - uses: actions/github-script@v9
+      with:
+        script: |
+          await require('./.github/scripts/performance-comment.cjs').run(
+            { github, context, core }, 'performance/swc-performance.json', true
+          );
   frontend:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: apps/admin
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
+    - uses: actions/checkout@v7
+    - uses: actions/setup-node@v7
       with:
-        node-version: '22'
+        node-version-file: apps/admin/.nvmrc
         cache: npm
         cache-dependency-path: apps/admin/package-lock.json
     - run: npm ci
-    - name: Audit shipped npm packages
-      run: npm audit --omit=dev --audit-level=high
+    - name: Audit npm packages including dev tooling
+      run: npm audit --audit-level=high
     - run: npm run lint && npm run typecheck
     - name: Tests with strict JS/TS line coverage gate (> 80 %)
       run: npm run test:coverage
     - run: npm run build
     - name: Upload frontend LCOV coverage
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: frontend-coverage
         path: apps/admin/coverage/lcov.info
@@ -90,21 +183,19 @@ jobs:
     - php
     - frontend
     if: |-
-      (github.event_name == 'pull_request' &&
-       github.event.pull_request.head.repo.full_name == github.repository &&
-       github.event.pull_request.user.login != 'dependabot[bot]') ||
-      (github.event_name == 'push' &&
-       github.ref_name == github.event.repository.default_branch)
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 0
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       with:
         name: php-coverage
         path: coverage
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       with:
         name: frontend-coverage
         path: coverage/frontend
@@ -124,7 +215,7 @@ jobs:
         test -s coverage/clover.xml
         test -s coverage/frontend/lcov.info
     - name: Analyze code and import coverage
-      uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9
+      uses: SonarSource/sonarqube-scan-action@59202af334b4ba7b5db01b701b8e79f8b3bef0f4
       with:
         args: -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
       env:

@@ -44,12 +44,25 @@ Event und Detail zusätzlich:
 | Platzhalter | Typ |
 |---|---|
 | `event.id`, `event.title`, `event.description`, `event.excerpt`, `event.location`, `event.calendar_name` | Text |
-| `event.start_date`, `event.start_time`, `event.end_date`, `event.end_time`, `event.date_range`, `event.day`, `event.month_short`, `event.weekday` | Text (lokalisiert, Zeitzone der Ansicht; Zeiten leer bei ganztägigen Terminen; Enddatum inklusiv) |
+| `event.start_date`, `event.start_time`, `event.end_date`, `event.end_time`, `event.date_range`, `event.day`, `event.month_short`, `event.year_short` (zweistellig), `event.weekday` | Text (lokalisiert, Zeitzone der Ansicht; Zeiten leer bei ganztägigen Terminen; Enddatum inklusiv) |
 | `event.start_iso`, `event.end_iso` | Text (ISO 8601 bzw. Datum bei ganztägigen Terminen) – für `<time datetime>` |
 | `event.url` (Link beim Anbieter), `event.detail_url`, `event.image` (lokales Vorschaubild) | URL |
 | `event.color` | Farbe `#rrggbb` |
 | `event.all_day`, `event.multi_day`, `event.tentative`, `event.has_images`, `event.has_files` | Flag |
 | `event.description_html`, `event.attachments.gallery`, `event.attachments.file_list` | HTML-Komponente |
+
+## CSS-Variablen
+
+Im Template-CSS stehen (auch im Tab „CSS“ des Editors aufgelistet) folgende Variablen zur Verfügung. So wählt das CSS je
+Eigenschaft die Farbe der Ansicht oder des Kalenders, ohne dass ein Template-Platzhalter nötig ist:
+
+| Variable | Bedeutung |
+|---|---|
+| `--swc-primary`, `--swc-primary-text` | Primärfarbe der Ansicht samt Kontrast-Textfarbe; nur gesetzt, wenn die Ansicht eine Primärfarbe hat – immer mit Fallback nutzen: `var(--swc-primary, #f7dc63)` |
+| `--swc-event-color`, `--swc-event-text` | Farbe des Kalenders des Termins (inkl. „Farben je Quelle“) samt Kontrast-Textfarbe; am Listeneintrag gesetzt |
+
+Beispiel (Preset „Date Badge List“): `background: var(--swc-primary, #f7dc63)` für die Ansichtsfarbe; für die Kalenderfarbe
+`background: var(--swc-event-color); color: var(--swc-event-text)`.
 
 ## Beispiel
 
@@ -65,6 +78,23 @@ Event und Detail zusätzlich:
 ```
 
 `data-swc-detail` auf einem Link öffnet die Detailansicht im Dialog (mit JavaScript), sonst navigiert er zur Detailseite.
+
+## Templates je Darstellung
+
+Eine Ansicht wählt Container- und Termin-Template **pro Darstellung** (`list`, `cards`, `month`). Ohne eigene Wahl
+übernimmt eine Darstellung das Template der ganzen Ansicht; ist dort ebenfalls nichts gewählt, greift das Preset der
+Darstellung. Reihenfolge bis zur Ausgabe:
+
+1. das in der Einbettung freigegebene `template` (nur Termin-Template, muss in `allowed_template_ids` enthalten sein),
+2. das Template der gewählten Darstellung,
+3. das Template der ganzen Ansicht,
+4. das Preset der Darstellung (`PresetLibrary::defaultFor()`).
+
+Der Wechsel der Darstellung (Tabs oder `view="cards"`) löst beide Templates neu: ein nur für Karten gewähltes Template
+erscheint deshalb nie im Monatsraster, und die Monatsliste gestaltet Liste und Karten getrennt. Detail-Templates sind
+darstellungsunabhängig. `allowed_template_ids` bleibt ansichtsbezogen – ein Standard-Template einer Darstellung ist keine
+Freigabe für den Parameter `template`. Der HTML-Cache (SPEC §12) enthält Darstellung und aufgelöste Templates im
+Schlüssel, ein nur über eine Darstellung gebundenes Template ist ebenfalls vor Löschung geschützt.
 
 ## Cache
 

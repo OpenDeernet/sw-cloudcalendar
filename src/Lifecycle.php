@@ -35,6 +35,7 @@ final class Lifecycle {
 
 	/** Deactivation keeps all data; only scheduled events are removed. */
 	public static function deactivate(): void {
+		\SW\Calendar\Infrastructure\WordPress\Update\Provider::deactivate();
 		QueueRunner::unschedule();
 	}
 
@@ -46,6 +47,7 @@ final class Lifecycle {
 		if ( empty( Settings::get( 'delete_data_on_uninstall' ) ) ) {
 			return;
 		}
+		\SW\Calendar\Infrastructure\WordPress\Update\Provider::uninstall();
 		$services = Services::instance();
 		foreach ( $services->connections()->all() as $connection ) {
 			try {
@@ -60,7 +62,7 @@ final class Lifecycle {
 		$root    = (string) ( $storage['fallback'] ?? '' );
 		Schema::drop_all();
 		Capabilities::revoke_all();
-		foreach ( array( Settings::OPTION, StorageGuard::OPTION, TransientCache::GENERATION_OPTION, TransientCache::STATS_OPTION, QueueRunner::LAST_TICK_OPTION, QueueRunner::LAST_MAINTENANCE_OPTION ) as $option ) {
+		foreach ( array( Settings::OPTION, StorageGuard::OPTION, TransientCache::GENERATION_OPTION, TransientCache::STATS_OPTION, QueueRunner::LAST_TICK_OPTION, QueueRunner::LAST_MAINTENANCE_OPTION, 'sw_calendar_preset_revision' ) as $option ) {
 			delete_option( $option );
 		}
 		// Only the plugin's own fallback directory below uploads is deleted; a configured external path is left alone.

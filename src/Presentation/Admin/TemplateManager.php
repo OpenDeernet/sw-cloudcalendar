@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace SW\Calendar\Presentation\Admin;
 
 use SW\Calendar\Application\Render\PresetLibrary;
+use SW\Calendar\Application\Render\PresetUpgrader;
 use SW\Calendar\Application\Render\PreviewRenderer;
 use SW\Calendar\Application\Render\Template\CssSanitizer;
 use SW\Calendar\Application\Render\Template\PlaceholderRegistry;
@@ -214,6 +215,15 @@ final class TemplateManager {
 		}
 	}
 
+	/** Brings stored preset copies that still carry an outdated shipped CSS up to date (customised ones stay). */
+	public function upgrade_legacy_presets(): int {
+		$count = ( new PresetUpgrader( $this->services->templates(), $this->services->presets() ) )->upgrade();
+		if ( $count > 0 ) {
+			$this->services->audit()->record( 'templates_preset_upgraded', 'template', 0 );
+		}
+		return $count;
+	}
+
 	/**
 	 * Safe preview of unsaved templates with the fixed datasets (no provider requests).
 	 *
@@ -253,7 +263,7 @@ final class TemplateManager {
 				'errors' => $errors,
 			);
 		}
-		$urls     = new PreviewUrlGenerator( SW_CALENDAR_URL . 'assets/img/preview.png' );
+		$urls     = new PreviewUrlGenerator( add_query_arg( 'ver', SW_CALENDAR_VERSION, SW_CALENDAR_URL . 'assets/img/preview.png' ) );
 		$renderer = new PreviewRenderer( $this->services->dates(), $urls, $this->services->sanitizer(), $this->services->labels(), (int) get_option( 'start_of_week', 1 ) );
 		$tz       = new \DateTimeZone( Settings::site_timezone() );
 		$result   = $renderer->render( $parts['container'], $parts['event'], $parts['detail'], $mode, $this->services->clock()->now(), $tz, $scopes, $css );

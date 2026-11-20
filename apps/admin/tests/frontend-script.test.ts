@@ -112,7 +112,7 @@ describe('frontend.js dynamic placeholders', () => {
     expect(nonceUrl).toBe(CONFIG.ajaxUrl + '?action=sw_calendar_rest_nonce');
     const url = new URL(renderUrl as string);
     expect(url.searchParams.get('limit')).toBe('5');
-    expect(url.searchParams.has('search')).toBe(false);
+    expect(url.searchParams.get('search')).toBe('');
     expect(url.searchParams.has('x')).toBe(false);
     expect(url.searchParams.get('page_url')).toBe('http://localhost:3000/page/?keep=1');
     const init = fetchMock.mock.calls[1]?.[1] as RequestInit;
@@ -304,6 +304,10 @@ describe('frontend.js navigation and details', () => {
     click(link);
     await flush();
     expect(document.querySelectorAll('dialog')).toHaveLength(1);
+    expect(dialog.querySelector('.swc-dialog__header .swc-dialog__title')?.textContent).toBe(
+      'Details',
+    );
+    expect(dialog.querySelector('.swc-dialog__header .swc-dialog__close')).not.toBeNull();
     (dialog.querySelector('#body11') as HTMLElement).click();
     expect(dialog.hasAttribute('open')).toBe(true);
     dialog.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -353,6 +357,168 @@ describe('frontend.js navigation and details', () => {
     const prevented = new MouseEvent('click', { bubbles: true, cancelable: true });
     prevented.preventDefault();
     document.getElementById('month')?.dispatchEvent(prevented);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+it('synchronizes only explicitly grouped month views and resets pagination', async () => {
+  document.body.innerHTML = `
+    <div class="swc-calendar" data-swc-view="1" data-swc-mode="month" data-swc-group="mgwh" data-swc-state='{}'><a href="/?swc_month=2026-11" data-swc-month="2026-11">Next</a></div>
+    <div class="swc-calendar" data-swc-view="2" data-swc-mode="list" data-swc-group="mgwh" data-swc-state='{"page":4,"source":[7]}'></div>
+    <div class="swc-calendar" data-swc-view="3" data-swc-mode="list" data-swc-group="other"></div>`;
+  routeFetch({
+    'admin-ajax.php': { body: { nonce: '' } },
+    '/render': { body: { html: '<div class="swc-calendar"></div>', css: {} } },
+  });
+  await loadScript(CONFIG);
+  click(document.querySelector('a')!);
+  await flush();
+  await flush();
+  expect(
+    calls().some(
+      (u) =>
+        u.includes('views/2/render') &&
+        u.includes('month=2026-11') &&
+        u.includes('page=1') &&
+        u.includes('view=list'),
+    ),
+  ).toBe(true);
+  expect(calls().some((u) => u.includes('views/1/render'))).toBe(true);
+  expect(calls().some((u) => u.includes('views/3/render'))).toBe(false);
+});
+
+it('loads opaque external event references in dynamic detail placeholders', async () => {
+  document.body.innerHTML =
+    '<div class="swc-calendar swc-dynamic" data-swc-view="1" data-swc-event="local.2.NDI"></div>';
+  routeFetch({
+    'admin-ajax.php': { body: { nonce: '' } },
+    'events/local.2.NDI': { body: { html: '<div>External detail</div>', css: {} } },
+  });
+  await loadScript(CONFIG);
+  document.dispatchEvent(new Event('DOMContentLoaded'));
+  await flush();
+  await flush();
+  expect(calls().some((u) => u.includes('events/local.2.NDI'))).toBe(true);
+  expect(document.body.textContent).toContain('External detail');
+});
+
+it('keeps the selected month when paging a month-filtered list', async () => {
+  document.body.innerHTML = `<div class="swc-calendar" data-swc-view="4" data-swc-mode="list" data-swc-state='{"limit":50,"month":"2026-11","page":1}'><a id="more" href="?swc_month=2026-11&swc_page=2" data-swc-page="2">more</a></div>`;
+  routeFetch({
+    sw_calendar_rest_nonce: { body: {} },
+    'views/4/render': {
+      body: { html: '<section class="swc-calendar" id="month-page-two"></section>' },
+    },
+  });
+  await loadScript(CONFIG);
+  click(document.getElementById('more')!);
+  await flush();
+  const url = new URL(calls()[1]!);
+  expect(url.searchParams.get('page')).toBe('2');
+  expect(url.searchParams.get('month')).toBe('2026-11');
+  expect(document.getElementById('month-page-two')).not.toBeNull();
+});
+
+describe('visitor display tabs and event search', () => {
+  it('switches only the current calendar and preserves its search and selected month', async () => {
+    document.body.innerHTML = `<div class="swc-calendar" data-swc-view="4" data-swc-mode="list" data-swc-state='{"search":"Choir","month":"2026-11","page":3}'><nav><a href="?swc_mode=month" data-swc-switch="month">Month</a></nav></div><div class="swc-calendar" id="unrelated" data-swc-view="5"></div>`;
+    routeFetch({
+      sw_calendar_rest_nonce: { body: {} },
+      'views/4/render': {
+        body: {
+          html: '<div class="swc-calendar"><a class="swc-mode-tabs__tab" aria-current="page" href="#">Month</a></div>',
+        },
+      },
+    });
+    await loadScript(CONFIG);
+    const link = document.querySelector('a')!;
+    expect(click(link).defaultPrevented).toBe(true);
+    // A second click during the same request must not start another render.
+    click(link);
+    await flush();
+    await flush();
+    const url = new URL(calls().find((u) => u.includes('/render'))!);
+    expect(url.searchParams.get('view')).toBe('month');
+    expect(url.searchParams.get('page')).toBe('1');
+    expect(url.searchParams.get('search')).toBe('Choir');
+    expect(url.searchParams.get('month')).toBe('2026-11');
+    expect(calls().filter((u) => u.includes('/render'))).toHaveLength(1);
+    expect(document.getElementById('unrelated')).not.toBeNull();
+    expect(document.activeElement?.getAttribute('aria-current')).toBe('page');
+  });
+
+  it('searches via REST, resets paging, preserves restrictions and can clear the term', async () => {
+    document.body.innerHTML = `<div class="swc-calendar" data-swc-view="4" data-swc-mode="cards" data-swc-state='{"source":[2],"page":5,"month":"2026-11"}'><form class="swc-search"><input type="search" name="swc_search" value=" Choir "><button>Search</button></form></div>`;
+    routeFetch({
+      sw_calendar_rest_nonce: { body: {} },
+      'views/4/render': {
+        body: {
+          html: `<div class="swc-calendar" data-swc-view="4" data-swc-mode="cards" data-swc-state='{"search":"Choir","month":"2026-11"}'><form class="swc-search"><input type="search" name="swc_search"></form></div>`,
+        },
+      },
+    });
+    await loadScript(CONFIG);
+    const form = document.querySelector('form')!;
+    const submit = new Event('submit', { bubbles: true, cancelable: true });
+    form.dispatchEvent(submit);
+    expect(submit.defaultPrevented).toBe(true);
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await flush();
+    await flush();
+    const url = new URL(calls().find((u) => u.includes('/render'))!);
+    expect(url.searchParams.get('search')).toBe('Choir');
+    expect(url.searchParams.get('page')).toBe('1');
+    expect(url.searchParams.get('source')).toBe('2');
+    expect(url.searchParams.get('view')).toBe('cards');
+    expect(document.activeElement?.getAttribute('type')).toBe('search');
+    document
+      .querySelector('form')!
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await flush();
+    await flush();
+    const last = new URL(
+      calls()
+        .filter((u) => u.includes('/render'))
+        .at(-1)!,
+    );
+    expect(last.searchParams.has('search')).toBe(true);
+    expect(last.searchParams.get('search')).toBe('');
+  });
+
+  it('submits month searches while keeping the month view and date range', async () => {
+    document.body.innerHTML = `<div class="swc-calendar" data-swc-view="4" data-swc-mode="month" data-swc-state='{"month":"2026-11"}'><form class="swc-search"><input type="search" value="Music"></form></div>`;
+    routeFetch({
+      sw_calendar_rest_nonce: { body: {} },
+      'views/4/render': {
+        body: { html: '<div class="swc-calendar" data-swc-mode="month">Filtered grid</div>' },
+      },
+    });
+    await loadScript(CONFIG);
+    document
+      .querySelector('form')!
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await flush();
+    await flush();
+    const url = new URL(calls().find((u) => u.includes('/render'))!);
+    expect(url.searchParams.get('view')).toBe('month');
+    expect(url.searchParams.get('month')).toBe('2026-11');
+    expect(url.searchParams.get('search')).toBe('Music');
+    expect(document.body.textContent).toContain('Filtered grid');
+  });
+
+  it('leaves other forms alone and ignores malformed or already-handled search submissions', async () => {
+    document.body.innerHTML =
+      '<form id="other"></form><form class="swc-search" id="outside"></form>' +
+      '<div class="swc-calendar" data-swc-view="1"><form class="swc-search" id="missing"></form></div>';
+    routeFetch({});
+    await loadScript(CONFIG);
+    for (const id of ['other', 'outside', 'missing'])
+      document
+        .getElementById(id)!
+        .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    const prevented = new Event('submit', { bubbles: true, cancelable: true });
+    prevented.preventDefault();
+    document.getElementById('missing')!.dispatchEvent(prevented);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
