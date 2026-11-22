@@ -31,6 +31,10 @@
 - Nicht ausführbare Prüfungen ausdrücklich als ungeprüft kennzeichnen.
 - Browser- und End-to-End-Tests bevorzugt mit Playwright in einem Docker-Container ausführen. Fehlende Testinfrastruktur bei Bedarf einrichten. Relevante Benutzerabläufe einschließlich Formularen, Interaktionen und Fehlerfällen prüfen. Screenshots und Fehlermeldungen zur Analyse nutzen.
 
+## Verbindliche Changelog-Pflege
+
+Bei jeder Änderung muss `pages/Changelog.md` im selben Arbeitsschritt aktualisiert werden. Noch nicht veröffentlichte Änderungen werden unter `Unreleased` in der passenden Kategorie `Feature`, `Bugs` oder `Other topics` eingetragen. Beschreibe die Änderung knapp und sachlich; fasse zusammengehörige Änderungen zusammen und vermeide doppelte Einträge. Kategorien und Versionsabschnitte dürfen nur erscheinen, wenn sie Einträge enthalten. Bei einer Veröffentlichung werden die zugehörigen Unreleased-Einträge der tatsächlichen Version mit Veröffentlichungsdatum zugeordnet.
+
 ## Workflow und Dokumentation
 - Änderungen zunächst im Kontext bestehender Implementierungen analysieren, anschließend implementieren, testen und prüfen.
 - Dokumentation knapp und ohne Wiederholungen halten. Bestehende Dokumentation verlinken statt duplizieren.
