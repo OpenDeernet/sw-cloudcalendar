@@ -38,6 +38,8 @@
 - Vorhandene `TODO.md` und vergleichbare Fortschrittsdateien bei Bedarf aktualisieren.
 - Nach jeder Implementierung kurz zusammenfassen: Änderungen, automatisierte Prüfergebnisse und konkrete manuelle Testschritte mit erwartetem Ergebnis.
 - Keine erfolgreichen Prüfungen, vollständige Implementierungen oder Commits behaupten, die nicht tatsächlich erfolgt sind.
+- After each implementation, include a concise German checklist of what Stefan can/should test as a user. Give concrete steps and the expected result for each relevant feature; distinguish recommended acceptance checks from optional checks. Report automated checks separately and never treat them as Stefan's practical acceptance.
+
 
 ## Statische Ressourcen und Cache-Busting
 - Eingebundene CSS- und JavaScript-Dateien immer mit der aktuellen Plugin-Version als Versionsparameter versehen, um veraltete Browser-Caches nach Updates zu vermeiden.
