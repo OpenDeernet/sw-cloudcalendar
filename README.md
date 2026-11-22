@@ -27,6 +27,14 @@ cards or a month grid via shortcode or block.
 
 English, German.
 
+## User documentation
+
+[User guide](https://sw-wordpress.github.io/sw-cloudcalendar/) · [Changelog](https://sw-wordpress.github.io/sw-cloudcalendar/Changelog.html)
+
+The documentation site is published after merge and the one-time GitHub Pages setup.
+Until then, read the [guide sources](pages/index.md). Build, deployment and update instructions:
+[Documentation maintenance](pages/README.md).
+
 ## Usage
 
 1. Open **Calendar → Connections**, click **Add connection** and choose ICS, Google or Microsoft 365.
